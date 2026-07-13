@@ -15,6 +15,8 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Top-level paths now match `**/` policy patterns, preventing sensitive paths such
   as `secrets/...` and `id_rsa` from bypassing deny rules.
+- Sensitive path globs now respect path-segment boundaries, avoiding false denies
+  for names such as `mysecrets/...`.
 - Non-string network `url` and `domain` values now return a clean input error instead
   of raising an uncaught `TypeError`.
 

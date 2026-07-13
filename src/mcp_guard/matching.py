@@ -21,10 +21,9 @@ def path_matches(value: str, pattern: str) -> bool:
         # In policy syntax, **/ means zero or more directories. Python's fnmatch
         # requires a slash here, so also test the top-level form explicitly.
         patterns.append(normalized_pattern[3:])
-    return any(
-        fnmatch.fnmatch(normalized, candidate) or text_matches(normalized, candidate)
-        for candidate in patterns
-    )
+    # Paths use glob semantics only. Substring fallback would make a segment such
+    # as ``mysecrets`` match the distinct policy segment ``secrets``.
+    return any(fnmatch.fnmatch(normalized, candidate) for candidate in patterns)
 
 
 def domain_matches(domain: str, pattern: str) -> bool:

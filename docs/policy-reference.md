@@ -30,7 +30,8 @@ or execute a shell command.
 
 Both `/` and `\` separators are normalized before case-insensitive glob matching.
 The `**/` prefix means zero or more directories, so `**/secrets/**` matches both
-`secrets/demo.json` and `nested/secrets/demo.json`.
+`secrets/demo.json` and `nested/secrets/demo.json`. Matching respects complete
+path segments: that pattern does not match `mysecrets/demo.json`.
 
 ### `network`
 
@@ -38,8 +39,9 @@ The `**/` prefix means zero or more directories, so `**/secrets/**` matches both
 - `allow_domains`: when non-empty, destinations outside this list produce `warn`.
 
 Domain matching is case-insensitive. `github.com` matches that exact hostname;
-`*.github.com` matches subdomains. A deny match takes precedence over an allow-list
-warning.
+`*.github.com` matches subdomains such as `api.github.com`, but intentionally does
+not match the apex `github.com`. List both patterns when both forms are allowed.
+A deny match takes precedence over an allow-list warning.
 
 ### `mcp_tools`
 
@@ -54,6 +56,10 @@ The outcome is deterministic:
 1. Any deny finding results in `deny` and high risk.
 2. Otherwise, any warn finding results in `warn` and medium risk.
 3. Otherwise, `default_decision` determines the result.
+
+`default_decision` is only the no-match fallback. An explicit warn rule therefore
+returns `warn` even when the default is `deny`; use a deny rule for an unconditional
+block.
 
 Every finding includes its rule, effect, matched policy value, and explanation.
 
