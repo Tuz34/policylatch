@@ -1,0 +1,18 @@
+{
+  "action_type": "windows_setting",
+  "timestamp": "2026-01-15T10:02:00Z",
+  "verification_state": "verified",
+  "source": "synthetic_snapshot_comparison",
+  "category": "registry",
+  "target": "HKCU\\Software\\SyntheticDemo\\Theme",
+  "operation": "compare_setting_presence",
+  "change": "created",
+  "before": {
+    "present": false
+  },
+  "after": {
+    "present": true
+  },
+  "actor": "demo-agent",
+  "tool": "synthetic-registry-adapter"
+}

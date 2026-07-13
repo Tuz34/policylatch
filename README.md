@@ -121,6 +121,14 @@ An MCP manifest uses a top-level `tools` array (or `server.tools`). Each tool ma
 
 All files under [`examples`](examples) are deliberately synthetic. They contain no real credentials, endpoints, or user data.
 
+### Experimental Windows audit foundation
+
+The first opt-in Windows audit contract is documented in
+[`docs/windows-audit.md`](docs/windows-audit.md). It keeps `proposed`, `observed`,
+and `verified` states separate and rejects raw setting values and value hashes.
+This foundation currently performs no Windows reads and has no background agent;
+read-only Registry, service, firewall, and policy providers remain roadmap work.
+
 ## What it checks
 
 - Blocked and review-required shell substrings.
@@ -230,6 +238,8 @@ The GitHub Actions workflow runs the same checks on Python 3.10 and 3.12. Contri
 
 - **v0.1:** More built-in rule packs, SARIF and HTML reports, reusable GitHub Action.
 - **v0.2:** Tool registry scanning, workspace baselines, MCP proxy dry-run mode.
+- **Windows audit:** Explicit read-only snapshot providers and historical views,
+  built on the summary-only contract without hidden monitoring.
 - **v1:** Optional runtime proxy, approval workflows, and a policy adapter such as OPA/Rego.
 
 ## License

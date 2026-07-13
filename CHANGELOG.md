@@ -10,6 +10,9 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Self-contained, responsive HTML reports with no scripts or external assets.
+- Experimental, summary-only Windows audit record contract with synthetic
+  fixtures and strict proposed/observed/verified trust states. This foundation
+  performs no system reads.
 
 ### Fixed
 
