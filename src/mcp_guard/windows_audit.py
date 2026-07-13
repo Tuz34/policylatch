@@ -42,6 +42,23 @@ _RAW_VALUE_FIELDS = frozenset(
     }
 )
 _ALLOWED_STATE_FIELDS = frozenset({"present", "redacted"})
+_ALLOWED_RECORD_FIELDS = frozenset(
+    {
+        "schema_version",
+        "kind",
+        "timestamp",
+        "verification_state",
+        "source",
+        "category",
+        "target",
+        "operation",
+        "change",
+        "before",
+        "after",
+        "actor",
+        "tool",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -150,10 +167,11 @@ def _validate_verified_change(change: str, before: StateSummary, after: StateSum
         "created": (False, True),
         "deleted": (True, False),
         "updated": (True, True),
-        "unchanged": (True, True),
     }.get(change)
     if expected_presence and (before.present, after.present) != expected_presence:
         raise InputError(f"Verified '{change}' change is inconsistent with before/after presence.")
+    if change == "unchanged" and before.present != after.present:
+        raise InputError("Verified 'unchanged' change requires equal before/after presence.")
 
 
 def parse_windows_setting_action(action: dict[str, Any]) -> WindowsAuditRecord:
@@ -200,3 +218,26 @@ def parse_windows_setting_action(action: dict[str, Any]) -> WindowsAuditRecord:
         actor=optional["actor"],
         tool=optional["tool"],
     )
+
+
+def parse_windows_audit_record(data: dict[str, Any]) -> WindowsAuditRecord:
+    """Validate a normalized record loaded from JSON or JSONL history."""
+
+    if not isinstance(data, dict):
+        raise InputError("Windows audit record must be an object.")
+
+    unknown = set(data) - _ALLOWED_RECORD_FIELDS
+    if unknown:
+        if unknown & _RAW_VALUE_FIELDS:
+            raise InputError("Windows audit records cannot contain raw values or value hashes.")
+        names = ", ".join(sorted(unknown))
+        raise InputError(f"Unknown Windows audit record fields: {names}.")
+
+    if type(data.get("schema_version")) is not int or data["schema_version"] != 1:
+        raise InputError("Windows audit record schema_version must be 1.")
+    if data.get("kind") != "windows_audit_record":
+        raise InputError("Windows audit record kind must be 'windows_audit_record'.")
+
+    action = {key: value for key, value in data.items() if key not in {"schema_version", "kind"}}
+    action["action_type"] = "windows_setting"
+    return parse_windows_setting_action(action)

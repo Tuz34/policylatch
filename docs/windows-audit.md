@@ -100,8 +100,42 @@ There is no CLI or automatic discovery path yet. Importing the module does not
 read the Registry. Service, firewall, policy, and Registry-value adapters remain
 unimplemented.
 
-Historical JSONL and HTML filtering will consume records only after the concrete
-provider and independent comparison boundaries are implemented and tested.
+## Presence comparison
+
+`compare_windows_snapshots` accepts a before and after observation for the same
+category and target. When both presence states are known, the resulting record is
+`verified`; an unknown state remains `observed`. A matching `proposed` record can
+be supplied to carry the declared operation, actor, and tool into the comparison.
+
+The comparison is intentionally narrow. It can verify that a target appeared,
+disappeared, or kept the same **presence**. Two `present: true` snapshots do not
+prove that a hidden Registry value or service configuration stayed unchanged.
+The engine therefore never infers an `updated` change from presence-only data.
+
+## Local JSONL history
+
+Summary-only records can be appended to a local JSONL file after a separate
+explicit opt-in:
+
+```python
+from mcp_guard.windows_history import append_audit_record, load_audit_history
+
+append_audit_record("audit.jsonl", record, enabled=True)
+records = load_audit_history("audit.jsonl")
+```
+
+Every line is strictly revalidated on write and read. Unknown fields, raw values,
+value hashes, malformed JSON, oversized lines, and histories above the configured
+record limit fail closed with a line-specific error. Loading never changes the
+file.
+
+`filter_audit_history` creates a static view by category, verification state, and
+inclusive ISO-8601 time range. Filtering does not rewrite the stored history. See
+[`synthetic-history.jsonl`](../examples/windows-audit/synthetic-history.jsonl) for
+a synthetic two-record example.
+
+HTML rendering and CLI integration will consume the validated, filtered history
+without changing the underlying JSONL file.
 
 All examples in [`examples/windows-audit`](../examples/windows-audit) are
 synthetic and contain no user or machine data.

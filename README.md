@@ -132,6 +132,12 @@ exists, and only through the `enabled=True` provider gate; it never queries a
 Registry value. Service, firewall, policy, and broader Registry adapters remain
 roadmap work.
 
+The audit library can also compare before/after presence snapshots and append
+strictly validated, summary-only records to opt-in local JSONL history. Category,
+verification-state, and ISO-8601 time filters produce static views without
+rewriting the stored audit file. See the [Windows audit contract](docs/windows-audit.md)
+for the exact trust and privacy boundaries.
+
 ## What it checks
 
 - Blocked and review-required shell substrings.

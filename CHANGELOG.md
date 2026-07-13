@@ -17,6 +17,9 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   access and cannot label a provider observation as verified.
 - Narrow HKCU Registry key-presence provider that uses read-only key access and
   never queries or writes Registry values.
+- Presence-only snapshot comparison with conservative verification semantics.
+- Strict, opt-in local JSONL audit history with category, trust-state, and time
+  filtering.
 
 ### Fixed
 

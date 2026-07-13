@@ -10,6 +10,8 @@ The experimental Windows audit library API does not change the default CLI behav
 Windows reads are off by default. Its first provider can check only whether an
 explicitly named HKCU Registry key exists after `enabled=True`; it does not query
 Registry values, write settings, request elevation, or run in the background.
+Optional JSONL history writes only validated summary records after a separate
+explicit opt-in; it rejects raw values and value hashes.
 
 The following are security-relevant:
 
@@ -19,6 +21,7 @@ The following are security-relevant:
 - Report output that exposes data not present in the supplied input or policy.
 - A Windows provider reading before explicit opt-in, querying raw values, changing a
   setting, or reporting an observation as independently verified.
+- Audit history accepting undocumented fields or sensitive before/after values.
 
 Rule coverage gaps and false negatives are important, but they are not proof of a
 sandbox escape because v0 is not a sandbox.
