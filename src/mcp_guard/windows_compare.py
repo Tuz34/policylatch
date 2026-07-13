@@ -46,7 +46,7 @@ def compare_windows_snapshots(
     *,
     proposed: WindowsAuditRecord | None = None,
 ) -> WindowsAuditRecord:
-    """Compare presence-only snapshots without inferring hidden value changes."""
+    """Compare summary-only snapshots without inferring hidden value changes."""
 
     if before.category != after.category:
         raise ComparisonError("Snapshots must have the same category.")

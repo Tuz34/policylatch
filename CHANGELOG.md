@@ -12,7 +12,7 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Self-contained, responsive HTML reports with no scripts or external assets.
 - Experimental, summary-only Windows audit record contract with synthetic
   fixtures and strict proposed/observed/verified trust states. This foundation
-  performs no system reads.
+  parser performs no system reads.
 - Explicit opt-in provider interface that stays closed before platform or provider
   access and cannot label a provider observation as verified.
 - Narrow HKCU Registry key-presence provider that uses read-only key access and
