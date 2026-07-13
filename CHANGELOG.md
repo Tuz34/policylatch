@@ -22,6 +22,8 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   filtering.
 - `audit-append` and `audit-report` CLI commands with compact, script-free HTML
   history output and explicit static filters.
+- GitHub Actions coverage for Python 3.10 and 3.12 on both Ubuntu and Windows,
+  with read-only repository permissions and fail-fast disabled.
 
 ### Fixed
 

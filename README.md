@@ -249,7 +249,9 @@ ruff format --check .
 python -m build
 ```
 
-The GitHub Actions workflow runs the same checks on Python 3.10 and 3.12. Contributions that add focused rule types, fixtures, and false-positive tests are welcome.
+The GitHub Actions workflow runs tests, lint, and formatting checks on Python 3.10
+and 3.12 across both Ubuntu and Windows. Contributions that add focused rule
+types, fixtures, and false-positive tests are welcome.
 
 ## Roadmap
 
