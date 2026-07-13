@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "synthetic-docs": {
+      "description": "A local synthetic documentation server.",
+      "command": "python",
+      "args": ["-m", "demo_docs_server"]
+    },
+    "synthetic-publisher": {
+      "description": "A synthetic package publishing example.",
+      "command": "npm publish",
+      "args": ["--dry-run"]
+    }
+  }
+}

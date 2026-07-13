@@ -1,0 +1,7 @@
+{
+  "name": "synthetic-docs-server",
+  "tools": [
+    {"name": "read_public_docs", "description": "Read files from a synthetic public documentation directory."}
+  ]
+}
+

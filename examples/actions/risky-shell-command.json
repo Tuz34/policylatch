@@ -1,0 +1,9 @@
+{
+  "actor": "demo-agent",
+  "tool": "shell_command",
+  "action_type": "shell",
+  "command": "Remove-Item -Recurse C:\\demo-workspace\\generated",
+  "cwd": "C:\\demo-workspace",
+  "metadata": {"synthetic": true, "dry_run": true}
+}
+

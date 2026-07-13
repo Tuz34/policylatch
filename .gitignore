@@ -1,0 +1,36 @@
+# Public-repository allowlist: ignore everything unless explicitly included below.
+*
+
+# Repository metadata and public documentation.
+!.gitattributes
+!.gitignore
+!.github/
+!.github/**
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE
+!README.md
+!SECURITY.md
+!pyproject.toml
+
+# Public source, reference docs, synthetic examples, and tests.
+!docs/
+!docs/**
+!examples/
+!examples/**
+!src/
+!src/**
+!tests/
+!tests/**
+
+# Generated or local-only content inside allowed directories.
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/.venv/
+**/*.egg-info/
+
+# Local planning and agent-session notes remain ignored by the deny-all rule.
+# PROJECT_CONTEXT.md
+# WORK_LOG.md

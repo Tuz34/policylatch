@@ -1,0 +1,69 @@
+# Policy reference
+
+`mcp-guard` policies are local YAML files. Version 1 intentionally has a small,
+explicit vocabulary. Unknown sections and rule names are errors, so a typo cannot
+silently weaken a policy.
+
+## Top-level fields
+
+| Field | Required | Meaning |
+|---|---:|---|
+| `version` | yes | Must be `1`. |
+| `default_decision` | no | `allow`, `warn`, or `deny`; defaults to `warn`. |
+| `rules` | no | Mapping of rule sections. |
+
+## Rule sections
+
+### `shell`
+
+- `deny_patterns`: shell text patterns that produce `deny`.
+- `warn_patterns`: shell text patterns that produce `warn`.
+
+Patterns are case-insensitive. `*` and `?` use glob matching; patterns without
+wildcards use substring matching. `mcp-guard` only compares text. It does not parse
+or execute a shell command.
+
+### `files`
+
+- `deny_paths`: path patterns that produce `deny`.
+- `warn_paths`: path patterns that produce `warn`.
+
+Both `/` and `\` separators are normalized before case-insensitive glob matching.
+The `**/` prefix means zero or more directories, so `**/secrets/**` matches both
+`secrets/demo.json` and `nested/secrets/demo.json`.
+
+### `network`
+
+- `deny_domains`: domain patterns that produce `deny`.
+- `allow_domains`: when non-empty, destinations outside this list produce `warn`.
+
+Domain matching is case-insensitive. `github.com` matches that exact hostname;
+`*.github.com` matches subdomains. A deny match takes precedence over an allow-list
+warning.
+
+### `mcp_tools`
+
+- `deny_if_description_contains`: blocked phrases in a tool description.
+- `warn_if_name_contains`: powerful-capability phrases in a tool name.
+- `warn_if_schema_contains`: sensitive terms in the serialized `inputSchema`.
+
+## Precedence
+
+The outcome is deterministic:
+
+1. Any deny finding results in `deny` and high risk.
+2. Otherwise, any warn finding results in `warn` and medium risk.
+3. Otherwise, `default_decision` determines the result.
+
+Every finding includes its rule, effect, matched policy value, and explanation.
+
+The same decision document can be rendered as JSON, Markdown, or a self-contained
+HTML report. Rendering never changes the underlying decision.
+
+## Policy authoring guidance
+
+- Prefer a small set of high-confidence deny rules.
+- Use warn for broad capability indicators that need human context.
+- Start sensitive environments with `default_decision: warn` or `deny`.
+- Review policy changes like application code.
+- Test both expected matches and false positives before sharing a policy.

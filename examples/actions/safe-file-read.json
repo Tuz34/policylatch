@@ -1,0 +1,8 @@
+{
+  "actor": "demo-agent",
+  "tool": "read_file",
+  "action_type": "file",
+  "path": "docs/guide.md",
+  "metadata": {"synthetic": true}
+}
+

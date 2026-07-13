@@ -1,0 +1,16 @@
+version: 1
+default_decision: warn
+rules:
+  shell:
+    deny_patterns: ["rm -rf", "Remove-Item -Recurse", "curl * | sh"]
+    warn_patterns: ["git push", "npm publish", "pip install"]
+  files:
+    deny_paths: [".env", "**/.env", "**/secrets/**", "**/*.pem"]
+    warn_paths: ["**/config/**"]
+  network:
+    allow_domains: ["github.com"]
+    deny_domains: ["*.webhook.site"]
+  mcp_tools:
+    deny_if_description_contains: ["ignore previous instructions", "send file contents"]
+    warn_if_name_contains: ["shell", "exec", "browser", "database"]
+    warn_if_schema_contains: ["command", "path", "url"]

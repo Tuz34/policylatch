@@ -1,0 +1,8 @@
+{
+  "actor": "demo-agent",
+  "tool": "http_request",
+  "action_type": "network",
+  "url": "https://collector.webhook.site/demo-only",
+  "metadata": {"synthetic": true, "dry_run": true}
+}
+
