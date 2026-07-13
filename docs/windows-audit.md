@@ -63,13 +63,22 @@ Parsing does not inspect the host and does not evaluate policy. The existing
 `mcp-guard check` command continues to support its documented shell, file, and
 network action types only.
 
-## Planned adapter boundary
+## Opt-in provider boundary
 
-Read-only Registry, service, firewall, and selected policy providers will be
-separate, explicitly enabled components. They will produce the same contract,
-return a clear unsupported-platform result outside Windows, and never change a
-system setting. Historical JSONL and HTML filtering will consume records only
-after the provider and comparison boundaries are implemented and tested.
+`collect_windows_snapshot` is the single call gate for future read-only providers.
+Its `enabled` keyword is required and only the literal value `True` opens the gate.
+When disabled, it does not inspect the platform or call provider code. When
+enabled outside Windows, it returns a clear `UnsupportedPlatformError` without
+calling the provider.
+
+Providers implement the small `WindowsSnapshotProvider` protocol and may return
+only a redacted `StateSummary`. Their result is always labeled `observed`; a
+provider cannot claim independent verification. No built-in Registry, service,
+firewall, or policy provider exists yet, so this interface still performs no host
+read on its own.
+
+Historical JSONL and HTML filtering will consume records only after the concrete
+provider and independent comparison boundaries are implemented and tested.
 
 All examples in [`examples/windows-audit`](../examples/windows-audit) are
 synthetic and contain no user or machine data.

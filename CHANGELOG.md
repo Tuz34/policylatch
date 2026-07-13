@@ -13,6 +13,8 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Experimental, summary-only Windows audit record contract with synthetic
   fixtures and strict proposed/observed/verified trust states. This foundation
   performs no system reads.
+- Explicit opt-in provider interface that stays closed before platform or provider
+  access and cannot label a provider observation as verified.
 
 ### Fixed
 

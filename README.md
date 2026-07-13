@@ -126,8 +126,9 @@ All files under [`examples`](examples) are deliberately synthetic. They contain 
 The first opt-in Windows audit contract is documented in
 [`docs/windows-audit.md`](docs/windows-audit.md). It keeps `proposed`, `observed`,
 and `verified` states separate and rejects raw setting values and value hashes.
-This foundation currently performs no Windows reads and has no background agent;
-read-only Registry, service, firewall, and policy providers remain roadmap work.
+The opt-in provider gate is present, but no built-in Windows provider exists yet;
+the project still performs no Windows reads and has no background agent. Read-only
+Registry, service, firewall, and policy adapters remain roadmap work.
 
 ## What it checks
 
