@@ -8,7 +8,7 @@ def _record(target="HKCU\\SyntheticDemo"):
             "action_type": "windows_setting",
             "timestamp": "2026-01-15T10:00:00Z",
             "verification_state": "verified",
-            "source": "synthetic_comparison",
+            "source": "snapshot_comparison:synthetic_provider->synthetic_provider",
             "category": "registry",
             "target": target,
             "operation": "compare_presence",

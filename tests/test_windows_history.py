@@ -27,7 +27,11 @@ def _record(timestamp="2026-01-15T10:00:00Z", *, category="registry", state="ver
             "action_type": "windows_setting",
             "timestamp": timestamp,
             "verification_state": state,
-            "source": "synthetic_comparison",
+            "source": (
+                "snapshot_comparison:synthetic_provider->synthetic_provider"
+                if state == "verified"
+                else "synthetic_observation"
+            ),
             "category": category,
             "target": "SyntheticTarget",
             "operation": "compare_presence",

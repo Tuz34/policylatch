@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Literal, cast
@@ -13,6 +14,10 @@ ChangeKind = Literal["created", "updated", "deleted", "unchanged", "unknown"]
 VERIFICATION_STATES = frozenset({"proposed", "observed", "verified"})
 WINDOWS_CATEGORIES = frozenset({"registry", "service", "firewall", "policy", "setting"})
 CHANGE_KINDS = frozenset({"created", "updated", "deleted", "unchanged", "unknown"})
+_COMPARISON_SOURCE = re.compile(
+    r"\Asnapshot_comparison:[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"
+    r"->[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z"
+)
 
 _ALLOWED_ACTION_FIELDS = frozenset(
     {
@@ -189,7 +194,17 @@ def _state_summary(action: dict[str, Any], field: str) -> StateSummary:
     return StateSummary(present=value["present"], facts=tuple(sorted(facts)))
 
 
-def _validate_verified_change(change: str, before: StateSummary, after: StateSummary) -> None:
+def _validate_verified_change(
+    source: str,
+    change: str,
+    before: StateSummary,
+    after: StateSummary,
+) -> None:
+    if _COMPARISON_SOURCE.fullmatch(source) is None:
+        raise InputError(
+            "Verified records require comparison provenance in "
+            "'snapshot_comparison:<before-source>-><after-source>' format."
+        )
     if before.present is None or after.present is None:
         raise InputError("Verified records require known before.present and after.present values.")
 
@@ -225,11 +240,12 @@ def parse_windows_setting_action(action: dict[str, Any]) -> WindowsAuditRecord:
     verification_state = _enum_value(action, "verification_state", VERIFICATION_STATES)
     category = _enum_value(action, "category", WINDOWS_CATEGORIES)
     change = _enum_value(action, "change", CHANGE_KINDS)
+    source = _required_text(action, "source")
     before = _state_summary(action, "before")
     after = _state_summary(action, "after")
 
     if verification_state == "verified":
-        _validate_verified_change(change, before, after)
+        _validate_verified_change(source, change, before, after)
 
     optional: dict[str, str | None] = {}
     for field in ("actor", "tool"):
@@ -238,7 +254,7 @@ def parse_windows_setting_action(action: dict[str, Any]) -> WindowsAuditRecord:
     return WindowsAuditRecord(
         timestamp=timestamp,
         verification_state=cast(VerificationState, verification_state),
-        source=_required_text(action, "source"),
+        source=source,
         category=cast(WindowsCategory, category),
         target=_required_text(action, "target"),
         operation=_required_text(action, "operation"),

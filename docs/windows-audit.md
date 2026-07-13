@@ -29,7 +29,7 @@ new verified record from an independent comparison.
   "action_type": "windows_setting",
   "timestamp": "2026-01-15T10:02:00Z",
   "verification_state": "verified",
-  "source": "synthetic_snapshot_comparison",
+  "source": "snapshot_comparison:synthetic_registry_provider->synthetic_registry_provider",
   "category": "registry",
   "target": "HKCU\\Software\\SyntheticDemo\\Theme",
   "operation": "compare_setting_presence",
@@ -169,7 +169,8 @@ mcp-guard windows-compare \
 
 An optional `--proposed` action carries the declared operation, actor, and tool
 into the comparison. Saved snapshots are strictly revalidated and cannot claim
-`verified`; only the comparison step can produce a verified record.
+`verified`. Verified records must carry the comparison provenance format emitted
+by `windows-compare`; `audit-append` rejects unmarked verified claims.
 
 ## Local JSONL history
 
@@ -187,6 +188,10 @@ Every line is strictly revalidated on write and read. Unknown fields, raw values
 value hashes, malformed JSON, oversized lines, and histories above the configured
 record limit fail closed with a line-specific error. Loading never changes the
 file.
+
+The comparison marker is a local workflow invariant, not a cryptographic
+signature. A user who can edit the JSONL file can also alter its contents;
+`mcp-guard` does not claim tamper-evident storage.
 
 `filter_audit_history` creates a static view by category, verification state, and
 inclusive ISO-8601 time range. Filtering does not rewrite the stored history. See

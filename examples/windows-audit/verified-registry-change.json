@@ -2,7 +2,7 @@
   "action_type": "windows_setting",
   "timestamp": "2026-01-15T10:02:00Z",
   "verification_state": "verified",
-  "source": "synthetic_snapshot_comparison",
+  "source": "snapshot_comparison:synthetic_registry_provider->synthetic_registry_provider",
   "category": "registry",
   "target": "HKCU\\Software\\SyntheticDemo\\Theme",
   "operation": "compare_setting_presence",

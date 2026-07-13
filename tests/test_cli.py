@@ -218,6 +218,39 @@ def test_audit_history_cli_append_filter_and_html_report(tmp_path):
     assert "<script" not in report
 
 
+def test_audit_append_rejects_verified_claim_without_comparison_provenance(tmp_path, capsys):
+    fake = {
+        "action_type": "windows_setting",
+        "timestamp": "2026-01-15T10:00:00Z",
+        "verification_state": "verified",
+        "source": "i_just_typed_this",
+        "category": "firewall",
+        "target": "public",
+        "operation": "compare_profile_state",
+        "change": "created",
+        "before": {"present": False},
+        "after": {"present": True},
+    }
+    source = tmp_path / "fake.json"
+    history = tmp_path / "audit.jsonl"
+    source.write_text(json.dumps(fake), encoding="utf-8")
+
+    code = main(
+        [
+            "audit-append",
+            "--input",
+            str(source),
+            "--history",
+            str(history),
+            "--enable-history",
+        ]
+    )
+
+    assert code == 3
+    assert not history.exists()
+    assert "comparison provenance" in capsys.readouterr().err
+
+
 def test_windows_snapshot_requires_explicit_enable_flag(tmp_path, capsys):
     output = tmp_path / "snapshot.json"
 

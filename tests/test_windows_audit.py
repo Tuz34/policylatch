@@ -101,6 +101,14 @@ def test_verified_change_presence_must_match_change_kind():
         parse_windows_setting_action(action)
 
 
+def test_verified_record_requires_snapshot_comparison_provenance():
+    action = json.loads((FIXTURES / "verified-registry-change.json").read_text(encoding="utf-8"))
+    action["source"] = "i_just_typed_this"
+
+    with pytest.raises(InputError, match="comparison provenance"):
+        parse_windows_setting_action(action)
+
+
 def test_serialized_record_has_no_raw_value_fields():
     action = json.loads((FIXTURES / "verified-registry-change.json").read_text(encoding="utf-8"))
 

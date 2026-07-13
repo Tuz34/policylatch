@@ -157,8 +157,10 @@ mcp-guard windows-compare --before before.json --after after.json \
 mcp-guard audit-append --input comparison.json --history audit.jsonl --enable-history
 ```
 
-Snapshot files are always `observed`. Only a consistent before/after comparison
-can create a `verified` record.
+Snapshot files are always `observed`. A `verified` record must contain a
+consistent before/after change and the comparison provenance format emitted by
+`windows-compare`; `audit-append` rejects unmarked verified claims. Local history
+is strictly validated but is not cryptographically tamper-evident.
 
 ## What it checks
 
