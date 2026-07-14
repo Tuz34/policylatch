@@ -7,6 +7,15 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .adapters import (
+    RUNTIMES,
+    adapter_config_document,
+    adapter_decision_document,
+    config_target,
+    hook_response,
+    safe_policy_label,
+    validate_adapter_config,
+)
 from .evaluator import evaluate_action
 from .gateway import MAX_GATEWAY_REQUEST_BYTES, evaluate_mcp_request
 from .gateway_trace import GatewayTraceError, gateway_trace_document, load_gateway_trace
@@ -44,25 +53,28 @@ MAX_JSON_INPUT_BYTES = 8 * 1024 * 1024
 
 
 def _read_json(path: str, *, max_bytes: int | None = None) -> dict[str, Any]:
-    input_path = Path(path)
     effective_max = MAX_JSON_INPUT_BYTES if max_bytes is None else max_bytes
-    try:
-        with input_path.open("rb") as handle:
-            raw = handle.read(effective_max + 1)
-    except OSError as exc:
-        raise InputError(f"Could not read JSON input '{input_path}': {exc}") from exc
+    input_label = "stdin" if path == "-" else str(Path(path))
+    if path == "-":
+        raw = sys.stdin.buffer.read(effective_max + 1)
+    else:
+        try:
+            with Path(path).open("rb") as handle:
+                raw = handle.read(effective_max + 1)
+        except OSError as exc:
+            raise InputError(f"Could not read JSON input '{input_label}': {exc}") from exc
     if len(raw) > effective_max:
-        raise InputError(f"JSON input '{input_path}' exceeds the {effective_max}-byte limit.")
+        raise InputError(f"JSON input '{input_label}' exceeds the {effective_max}-byte limit.")
     try:
         data = json.loads(raw.decode("utf-8"))
     except UnicodeDecodeError as exc:
-        raise InputError(f"JSON input '{input_path}' must be valid UTF-8.") from exc
+        raise InputError(f"JSON input '{input_label}' must be valid UTF-8.") from exc
     except json.JSONDecodeError as exc:
         raise InputError(
-            f"Invalid JSON in '{input_path}' at line {exc.lineno}, column {exc.colno}: {exc.msg}"
+            f"Invalid JSON in '{input_label}' at line {exc.lineno}, column {exc.colno}: {exc.msg}"
         ) from exc
     except RecursionError as exc:
-        raise InputError(f"JSON input '{input_path}' is nested too deeply.") from exc
+        raise InputError(f"JSON input '{input_label}' is nested too deeply.") from exc
     if not isinstance(data, dict):
         raise InputError("JSON input must be an object.")
     return data
@@ -126,6 +138,39 @@ def build_parser() -> argparse.ArgumentParser:
     _add_policy_selector(replay)
     replay.add_argument("--format", choices=["json", "markdown", "html", "sarif"], default="json")
     replay.add_argument("--output", help="Write the report to this path instead of stdout.")
+    adapter_check = sub.add_parser(
+        "adapter-check",
+        help="Evaluate a saved Claude Code or Codex PreToolUse event without forwarding.",
+    )
+    adapter_check.add_argument("--runtime", choices=RUNTIMES, required=True)
+    adapter_check.add_argument("--input", required=True)
+    _add_policy_selector(adapter_check)
+    adapter_check.add_argument(
+        "--format", choices=["json", "markdown", "html", "sarif"], default="json"
+    )
+    adapter_check.add_argument("--output")
+    adapter_hook = sub.add_parser(
+        "adapter-hook",
+        help="Read one PreToolUse event and emit the runtime-specific hook response.",
+    )
+    adapter_hook.add_argument("--runtime", choices=RUNTIMES, required=True)
+    adapter_hook.add_argument("--input", default="-")
+    _add_policy_selector(adapter_hook)
+    adapter_hook.add_argument("--output")
+    adapter_config = sub.add_parser(
+        "adapter-config",
+        help="Generate a review-first hook configuration snippet; no config is installed.",
+    )
+    adapter_config.add_argument("--runtime", choices=RUNTIMES, required=True)
+    _add_policy_selector(adapter_config)
+    adapter_config.add_argument("--platform", choices=["posix", "windows"])
+    adapter_config.add_argument("--output")
+    adapter_doctor = sub.add_parser(
+        "adapter-doctor", help="Validate one saved PolicyLatch hook configuration snippet."
+    )
+    adapter_doctor.add_argument("--runtime", choices=RUNTIMES, required=True)
+    adapter_doctor.add_argument("--config", required=True)
+    adapter_doctor.add_argument("--output")
     report = sub.add_parser("report", help="Convert a saved JSON result into a report.")
     report.add_argument("--input", required=True)
     report.add_argument(
@@ -330,6 +375,48 @@ def _explain_markdown(payload: dict[str, Any]) -> str:
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "adapter-config":
+        policy = None
+        if args.policy:
+            load_policy(args.policy)
+            policy = str(Path(args.policy).resolve())
+        payload = adapter_config_document(
+            args.runtime,
+            policy=policy,
+            profile=args.profile,
+            platform=args.platform,
+        )
+        _write(json_report(payload), args.output)
+        print(
+            f"Review and manually merge this snippet into {config_target(args.runtime)}.",
+            file=sys.stderr,
+        )
+        return 0
+    if args.command == "adapter-doctor":
+        payload = validate_adapter_config(args.runtime, _read_json(args.config))
+        _write(json_report(payload), args.output)
+        return 0
+    if args.command in {"adapter-check", "adapter-hook"}:
+        data = _read_json(args.input, max_bytes=MAX_GATEWAY_REQUEST_BYTES)
+        policy, label = _selected_policy(args)
+        payload = adapter_decision_document(
+            args.runtime,
+            data,
+            policy,
+            label if args.profile else safe_policy_label(args.policy),
+        )
+        if args.command == "adapter-hook":
+            _write(json_report(hook_response(args.runtime, payload)), args.output)
+            return 0
+        validate_report(payload)
+        rendered = {
+            "json": json_report,
+            "markdown": markdown_report,
+            "html": html_report,
+            "sarif": sarif_report,
+        }[args.format](payload)
+        _write(rendered, args.output)
+        return EXIT_CODES[payload["decision"]]
     if args.command == "windows-compare":
         before = parse_observed_windows_snapshot(_read_json(args.before))
         after = parse_observed_windows_snapshot(_read_json(args.after))

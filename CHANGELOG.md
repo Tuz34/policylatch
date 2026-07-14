@@ -21,6 +21,9 @@ green cross-platform CI run and final review.
 
 ### Added
 
+- Review-first Claude Code and Codex `PreToolUse` adapters with bounded event
+  normalization, data-minimized decisions, generated config snippets, offline
+  doctor checks, and explicit blocking-versus-advisory capability labels.
 - Built-in `minimal`, `balanced`, `strict`, and `ci` policy profiles; bounded
   local-only inheritance; policy provenance; and offline `doctor`/`explain`
   commands.

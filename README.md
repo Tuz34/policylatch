@@ -61,6 +61,22 @@ policylatch gateway-replay \
   --format markdown
 ```
 
+Evaluate a synthetic runtime hook and generate a review-first configuration
+snippet without changing Claude Code or Codex settings:
+
+```bash
+policylatch adapter-check --runtime claude-code \
+  --input examples/adapters/claude-code-denied-shell.json \
+  --profile strict
+policylatch adapter-config --runtime claude-code --profile strict \
+  --output claude-hook.json
+```
+
+Claude Code can consume a blocking `PreToolUse` decision. The current Codex
+command-hook contract is advisory only, so PolicyLatch does not describe that
+adapter as a security boundary. See [runtime adapters](docs/runtime-adapters.md)
+for setup, rollback, and bypass details.
+
 Evaluate a proposed agent action:
 
 ```bash
@@ -414,12 +430,13 @@ types, fixtures, and false-positive tests are welcome.
   JSON/Markdown/HTML reports, synthetic examples, and cross-platform tests.
 - **Current development (unreleased):** No-forward `tools/call` gateway checks
   and bounded synthetic trace replay, explicit tool allow/deny rules, opt-in
-  Windows audit snapshots/history, SARIF, and the reusable GitHub Action.
+  Windows audit snapshots/history, SARIF, the reusable GitHub Action, and thin
+  review-first Claude Code/Codex hook adapters.
 - **Next gateway milestone:** A narrowly scoped stdio transport wrapper with an
   explicit upstream command, fail-closed limits, synthetic replay tests, and no
   hidden configuration changes.
-- **Later:** Local approval workflow and audit timeline, thin Claude Code/Codex
-  adapters, workspace baselines, and an optional policy adapter such as OPA/Rego.
+- **Later:** Local approval workflow, workspace baselines, and an optional policy
+  adapter such as OPA/Rego.
 
 The PolicyLatch name is approved and the compatibility migration is under review.
 No release/tag or package publication is implied by the current development state.

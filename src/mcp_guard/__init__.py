@@ -12,6 +12,7 @@ from importlib import import_module
 from policylatch import __version__
 
 _MODULES = (
+    "adapters",
     "cli",
     "environment",
     "evaluator",

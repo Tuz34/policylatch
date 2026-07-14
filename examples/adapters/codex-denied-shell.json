@@ -1,0 +1,11 @@
+{
+  "session_id": "synthetic-session",
+  "transcript_path": null,
+  "cwd": "synthetic-workspace",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "Remove-Item -Recurse D:\\Synthetic\\demo"
+  },
+  "tool_use_id": "synthetic-tool-use"
+}
