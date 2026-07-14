@@ -4,6 +4,8 @@
 
 Stop risky MCP tools before your agent runs them. `mcp-guard` is a small Python CLI that checks proposed agent actions and MCP tool manifests against a readable YAML policy. Think of it as a pre-flight safety check for AI agent tool calls.
 
+![mcp-guard HTML permission report showing a denied network action](docs/assets/mcp-guard-permission-report.png)
+
 > [!IMPORTANT]
 > v0 never executes an action or calls an MCP tool. It is a policy evaluator, not a sandbox and not a replacement for human approval.
 
