@@ -37,10 +37,9 @@ The primary entry points are `policylatch` and `python -m policylatch`. The form
 `mcp-guard` command and `python -m mcp_guard` remain compatibility aliases for one
 transition release.
 
-The Python distribution and primary import package are now `policylatch`. See the
-[name migration guide](docs/name-migration.md) for CLI, import, environment, Action,
-and rollback details. During migration review the GitHub repository still uses its
-former `Tuz34/mcp-guard` slug; the repository rename is deliberately the final step.
+The Python distribution, primary import package, and GitHub repository are now
+`policylatch`. See the [name migration guide](docs/name-migration.md) for CLI,
+import, environment, Action, and rollback details.
 
 Evaluate a synthetic MCP tool call without forwarding it anywhere:
 
@@ -327,7 +326,7 @@ revision and does not execute the proposed tool call.
 ```yaml
 - name: Guard proposed agent action
   id: guard
-  uses: Tuz34/mcp-guard@<reviewed-commit-or-release>
+  uses: Tuz34/policylatch@<reviewed-commit-or-release>
   with:
     command: check
     input-file: examples/actions/safe-file-read.json
@@ -357,7 +356,7 @@ permissions:
 steps:
   - uses: actions/checkout@v7
   - id: guard
-    uses: Tuz34/mcp-guard@<reviewed-commit-or-release>
+    uses: Tuz34/policylatch@<reviewed-commit-or-release>
     with:
       command: scan
       input-file: examples/mcp/risky-server.json

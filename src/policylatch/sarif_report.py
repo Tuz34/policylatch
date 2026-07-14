@@ -73,7 +73,7 @@ def sarif_document(data: dict[str, Any]) -> dict[str, Any]:
                 "tool": {
                     "driver": {
                         "name": "policylatch",
-                        "informationUri": "https://github.com/Tuz34/mcp-guard",
+                        "informationUri": "https://github.com/Tuz34/policylatch",
                         "semanticVersion": __version__,
                         "rules": rules,
                     }

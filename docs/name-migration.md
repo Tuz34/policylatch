@@ -33,11 +33,11 @@ part of the rename.
 
 ## GitHub Action transition
 
-During migration review, the repository remains at `Tuz34/mcp-guard`, so existing
-commit-pinned Action references continue to use that path. After the code migration,
-compatibility tests, review, and cross-platform CI are green, the repository will be
-renamed to `Tuz34/policylatch` and documentation links will be updated in a final
-metadata commit. No release tag exists yet.
+The repository was renamed to `Tuz34/policylatch` after the code migration,
+compatibility tests, independent review, and cross-platform CI were green. New
+Action references should use `Tuz34/policylatch@<reviewed-commit-or-release>`.
+GitHub redirects existing repository links and commit-pinned Action references from
+the former slug. No release tag exists yet.
 
 ## Rollback
 
