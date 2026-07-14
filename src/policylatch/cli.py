@@ -12,7 +12,8 @@ from .gateway import MAX_GATEWAY_REQUEST_BYTES, evaluate_mcp_request
 from .gateway_trace import GatewayTraceError, gateway_trace_document, load_gateway_trace
 from .html_report import html_report
 from .models import aggregate
-from .policy import PolicyError, load_policy
+from .policy import PolicyError, load_policy, load_profile, policy_provenance
+from .profiles import profile_names
 from .reports import json_report, markdown_report, validate_report
 from .sarif_report import sarif_report
 from .scanners import scan_manifest
@@ -77,6 +78,20 @@ def _write(content: str, output: str | None) -> None:
         print(content, end="")
 
 
+def _add_policy_selector(parser: argparse.ArgumentParser) -> None:
+    selector = parser.add_mutually_exclusive_group(required=True)
+    selector.add_argument("--policy", help="Load an explicit local YAML policy file.")
+    selector.add_argument(
+        "--profile", choices=profile_names(), help="Use a built-in policy profile."
+    )
+
+
+def _selected_policy(args: argparse.Namespace) -> tuple[dict[str, Any], str]:
+    if getattr(args, "profile", None):
+        return load_profile(args.profile), f"profile:{args.profile}"
+    return load_policy(args.policy), Path(args.policy).name
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="policylatch",
@@ -90,7 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     ]:
         child = sub.add_parser(command, help=help_text)
         child.add_argument(input_flag, required=True)
-        child.add_argument("--policy", required=True)
+        _add_policy_selector(child)
         child.add_argument(
             "--format", choices=["json", "markdown", "html", "sarif"], default="json"
         )
@@ -100,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Evaluate one MCP tools/call request in no-forward dry-run mode.",
     )
     gateway.add_argument("--request", required=True)
-    gateway.add_argument("--policy", required=True)
+    _add_policy_selector(gateway)
     gateway.add_argument("--format", choices=["json", "markdown", "html", "sarif"], default="json")
     gateway.add_argument("--output", help="Write the report to this path instead of stdout.")
     replay = sub.add_parser(
@@ -108,7 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Evaluate a bounded synthetic MCP tools/call JSONL trace without forwarding.",
     )
     replay.add_argument("--input", required=True)
-    replay.add_argument("--policy", required=True)
+    _add_policy_selector(replay)
     replay.add_argument("--format", choices=["json", "markdown", "html", "sarif"], default="json")
     replay.add_argument("--output", help="Write the report to this path instead of stdout.")
     report = sub.add_parser("report", help="Convert a saved JSON result into a report.")
@@ -117,6 +132,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=["json", "markdown", "html", "sarif"], default="markdown"
     )
     report.add_argument("--output", help="Write the report to this path instead of stdout.")
+    doctor = sub.add_parser(
+        "doctor",
+        help="Validate and summarize a resolved local policy or built-in profile.",
+    )
+    _add_policy_selector(doctor)
+    doctor.add_argument("--format", choices=["json", "markdown"], default="json")
+    doctor.add_argument("--output")
+    explain = sub.add_parser(
+        "explain",
+        help="Explain rule provenance in a saved PolicyLatch decision report.",
+    )
+    explain.add_argument("--input", required=True)
+    explain.add_argument("--format", choices=["json", "markdown"], default="markdown")
+    explain.add_argument("--output")
     audit_append = sub.add_parser(
         "audit-append", help="Append a validated Windows audit record to local JSONL history."
     )
@@ -156,20 +185,29 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _action_document(source: str, policy_path: str, data: dict[str, Any]) -> dict[str, Any]:
-    policy = load_policy(policy_path)
+def _action_document(
+    source: str,
+    policy: dict[str, Any],
+    policy_label: str,
+    data: dict[str, Any],
+) -> dict[str, Any]:
     evaluation = evaluate_action(data, policy)
     return {
         "schema_version": 1,
         "kind": "action_evaluation",
         "source": source,
-        "policy": policy_path,
+        "policy": policy_label,
+        "policy_provenance": policy_provenance(policy),
         **evaluation.to_dict(),
     }
 
 
-def _scan_document(source: str, policy_path: str, data: dict[str, Any]) -> dict[str, Any]:
-    policy = load_policy(policy_path)
+def _scan_document(
+    source: str,
+    policy: dict[str, Any],
+    policy_label: str,
+    data: dict[str, Any],
+) -> dict[str, Any]:
     evaluations = scan_manifest(data, policy)
     decision, risk_level = aggregate(evaluations)
     counts = {name: sum(item.decision == name for item in evaluations) for name in EXIT_CODES}
@@ -177,7 +215,8 @@ def _scan_document(source: str, policy_path: str, data: dict[str, Any]) -> dict[
         "schema_version": 1,
         "kind": "manifest_scan",
         "source": source,
-        "policy": policy_path,
+        "policy": policy_label,
+        "policy_provenance": policy_provenance(policy),
         "decision": decision,
         "risk_level": risk_level,
         "summary": {"total": len(evaluations), **counts},
@@ -185,12 +224,109 @@ def _scan_document(source: str, policy_path: str, data: dict[str, Any]) -> dict[
     }
 
 
-def _gateway_document(source: str, policy_path: str, data: dict[str, Any]) -> dict[str, Any]:
-    policy = load_policy(policy_path)
+def _gateway_document(
+    source: str,
+    policy: dict[str, Any],
+    policy_label: str,
+    data: dict[str, Any],
+) -> dict[str, Any]:
     return {
-        "policy": Path(policy_path).name,
+        "policy": policy_label,
+        "policy_provenance": policy_provenance(policy),
         **evaluate_mcp_request(data, policy).to_dict(source=Path(source).name),
     }
+
+
+def _doctor_document(policy: dict[str, Any], policy_label: str) -> dict[str, Any]:
+    rule_counts = {
+        section: sum(len(patterns) for patterns in values.values())
+        for section, values in policy.get("rules", {}).items()
+    }
+    return {
+        "schema_version": 1,
+        "kind": "policy_doctor",
+        "status": "ok",
+        "policy": policy_label,
+        "default_decision": policy["default_decision"],
+        "rule_counts": rule_counts,
+        "policy_provenance": policy_provenance(policy),
+        "network_access": False,
+        "files_modified": False,
+    }
+
+
+def _doctor_markdown(payload: dict[str, Any]) -> str:
+    provenance = payload["policy_provenance"]
+    lines = [
+        "# PolicyLatch doctor",
+        "",
+        f"Status: **{payload['status'].upper()}**",
+        f"Policy: `{payload['policy']}`",
+        f"Default decision: **{payload['default_decision'].upper()}**",
+        "",
+        "## Resolved sources",
+        "",
+    ]
+    lines.extend(f"- `{source}`" for source in provenance["sources"])
+    lines.extend(["", "## Rule counts", ""])
+    lines.extend(
+        f"- `{section}`: {count}" for section, count in sorted(payload["rule_counts"].items())
+    )
+    lines.extend(["", "> Offline validation only; no files were modified.", ""])
+    return "\n".join(lines)
+
+
+def _explain_document(payload: dict[str, Any]) -> dict[str, Any]:
+    rows = validate_report(payload)
+    provenance = payload.get("policy_provenance")
+    if not isinstance(provenance, dict):
+        raise InputError("Saved report does not contain policy_provenance.")
+    rule_sources = provenance.get("rule_sources")
+    if not isinstance(rule_sources, dict):
+        raise InputError("Saved report policy_provenance does not contain rule_sources.")
+    findings = []
+    for row in rows:
+        for reason in row.get("reasons", []):
+            findings.append(
+                {
+                    "subject": row.get("subject", "action"),
+                    "rule": reason["rule"],
+                    "effect": reason["effect"],
+                    "source": rule_sources.get(reason["rule"], "default-or-runtime-rule"),
+                    "message": reason["message"],
+                }
+            )
+    return {
+        "schema_version": 1,
+        "kind": "policy_explanation",
+        "decision": payload["decision"],
+        "risk_level": payload["risk_level"],
+        "policy": payload.get("policy", "unknown"),
+        "policy_provenance": provenance,
+        "findings": findings,
+    }
+
+
+def _explain_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        "# PolicyLatch explanation",
+        "",
+        f"Decision: **{payload['decision'].upper()}**",
+        f"Policy: `{payload['policy']}`",
+        "",
+        "## Rule provenance",
+        "",
+    ]
+    if payload["findings"]:
+        for finding in payload["findings"]:
+            lines.append(
+                f"- **{finding['effect'].upper()}** `{finding['rule']}` from "
+                f"`{finding['source']}`: {finding['message']}"
+            )
+    else:
+        lines.append("No warn or deny finding; the resolved default decision applied.")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -251,24 +387,39 @@ def run(args: argparse.Namespace) -> int:
         renderer = history_json_report if args.format == "json" else history_html_report
         _write(renderer(payload), args.output)
         return 0
+    if args.command == "doctor":
+        policy, label = _selected_policy(args)
+        payload = _doctor_document(policy, label)
+        rendered = json_report(payload) if args.format == "json" else _doctor_markdown(payload)
+        _write(rendered, args.output)
+        return 0
+    if args.command == "explain":
+        payload = _explain_document(_read_json(args.input))
+        rendered = json_report(payload) if args.format == "json" else _explain_markdown(payload)
+        _write(rendered, args.output)
+        return 0
     if args.command == "gateway-replay":
-        policy = load_policy(args.policy)
+        policy, label = _selected_policy(args)
         payload = gateway_trace_document(
             load_gateway_trace(args.input, policy),
             source=args.input,
-            policy=args.policy,
+            policy=label,
         )
+        payload["policy_provenance"] = policy_provenance(policy)
     elif args.command == "report":
         payload = _read_json(args.input)
     elif args.command == "check":
         data = _read_json(args.action)
-        payload = _action_document(args.action, args.policy, data)
+        policy, label = _selected_policy(args)
+        payload = _action_document(args.action, policy, label, data)
     elif args.command == "gateway-check":
         data = _read_json(args.request, max_bytes=MAX_GATEWAY_REQUEST_BYTES)
-        payload = _gateway_document(args.request, args.policy, data)
+        policy, label = _selected_policy(args)
+        payload = _gateway_document(args.request, policy, label, data)
     else:
         data = _read_json(args.mcp_config)
-        payload = _scan_document(args.mcp_config, args.policy, data)
+        policy, label = _selected_policy(args)
+        payload = _scan_document(args.mcp_config, policy, label, data)
 
     validate_report(payload)
     decision = payload["decision"]

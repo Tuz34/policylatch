@@ -1,0 +1,9 @@
+version: 1
+profile: balanced
+default_decision: warn
+rules:
+  network:
+    allow_domains:
+      - github.com
+      - api.github.com
+

@@ -70,6 +70,19 @@ policylatch check \
   --format markdown
 ```
 
+Or use a versioned built-in profile and inspect its resolved sources first:
+
+```bash
+policylatch doctor --profile balanced
+policylatch check \
+  --action examples/actions/risky-shell-command.json \
+  --profile balanced
+```
+
+Projects can extend a built-in profile or another local policy with deterministic,
+replace-by-rule merge semantics. Includes are local-only and bounded; see the
+[policy reference](docs/policy-reference.md#profiles-and-local-inheritance).
+
 Expected decision:
 
 ```text

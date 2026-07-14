@@ -21,6 +21,7 @@ _MODULES = (
     "matching",
     "models",
     "policy",
+    "profiles",
     "reports",
     "sarif_report",
     "scanners",

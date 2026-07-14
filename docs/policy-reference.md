@@ -10,7 +10,45 @@ silently weaken a policy.
 |---|---:|---|
 | `version` | yes | Must be `1`. |
 | `default_decision` | no | `allow`, `warn`, or `deny`; defaults to `warn`. |
+| `profile` | no | Built-in `minimal`, `balanced`, `strict`, or `ci` base. |
+| `extends` | no | Relative local policy path, or a list merged left-to-right. |
 | `rules` | no | Mapping of rule sections. |
+
+## Profiles and local inheritance
+
+Use a built-in profile directly from the CLI:
+
+```bash
+policylatch doctor --profile balanced
+policylatch check --action action.json --profile balanced
+```
+
+A project policy can start from a profile and replace selected rule lists:
+
+```yaml
+version: 1
+profile: balanced
+default_decision: warn
+rules:
+  network:
+    allow_domains: ["github.com", "api.github.com"]
+```
+
+Local policy inheritance uses `extends` with a relative path or a list of relative
+paths. Sources are merged left-to-right; the current file is applied last. A
+defined `default_decision` replaces the inherited value, and each named rule list
+replaces rather than appends to the inherited list. Use an empty list to clear a
+rule explicitly.
+
+Includes must stay below the root policy directory. Absolute paths, parent
+traversal, URLs, cycles, more than 8 levels, more than 16 files, and more than
+4 MiB of total policy input fail closed. Policy resolution never accesses the
+network.
+
+`doctor` reports the resolved profile, sources, default, and rule counts without
+modifying files. Decision JSON and Markdown include `policy_provenance`; `explain`
+reads a saved decision and maps each finding to the profile or policy file that
+defined the matched rule.
 
 ## Rule sections
 

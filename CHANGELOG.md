@@ -21,6 +21,9 @@ green cross-platform CI run and final review.
 
 ### Added
 
+- Built-in `minimal`, `balanced`, `strict`, and `ci` policy profiles; bounded
+  local-only inheritance; policy provenance; and offline `doctor`/`explain`
+  commands.
 - Competitive capability matrix and a clean-room development policy that
   records product-level provenance without reusing third-party implementation,
   rules, tests, fixtures, or prose.

@@ -85,6 +85,11 @@ def markdown_report(data: dict[str, Any]) -> str:
             )
     if not found:
         lines.append("No policy findings.")
+    provenance = data.get("policy_provenance")
+    if isinstance(provenance, dict) and isinstance(provenance.get("sources"), list):
+        lines += ["", "## Policy provenance", ""]
+        for source in provenance["sources"]:
+            lines.append(f"- `{_inline_code(source)}`")
     lines += [
         "",
         "> PolicyLatch evaluates proposed actions; it does not execute tools or provide a sandbox.",
