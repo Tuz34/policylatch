@@ -7,6 +7,9 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+Planned for `0.2.0`. No tag or release has been created; publication requires a
+green cross-platform CI run and final review.
+
 ### Added
 
 - Self-contained, responsive HTML reports with no scripts or external assets.

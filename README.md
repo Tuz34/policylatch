@@ -271,11 +271,15 @@ types, fixtures, and false-positive tests are welcome.
 
 ## Roadmap
 
-- **v0.1:** More built-in rule packs, SARIF and HTML reports, reusable GitHub Action.
-- **v0.2:** Tool registry scanning, workspace baselines, MCP proxy dry-run mode.
-- **Windows audit:** Additional explicitly allowlisted read-only providers, built
-  on the summary-only history and report flow without hidden monitoring.
-- **v1:** Optional runtime proxy, approval workflows, and a policy adapter such as OPA/Rego.
+- **v0.1 (current MVP):** Policy checks, MCP/tool manifest scanning, explained
+  JSON/Markdown/HTML reports, synthetic examples, and cross-platform tests.
+- **v0.2.0 (next, not released):** Opt-in Windows audit snapshots/history,
+  SARIF output, and a reusable GitHub Action. The release remains blocked on a
+  green cross-platform CI run and final review.
+- **v0.3:** Tool registry scanning and workspace risk baselines, still without
+  executing agent actions.
+- **v1:** Optional runtime proxy/dry-run interception, approval workflows, and a
+  policy adapter such as OPA/Rego.
 
 ## License
 
