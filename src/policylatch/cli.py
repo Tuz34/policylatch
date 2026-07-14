@@ -703,7 +703,7 @@ def run(args: argparse.Namespace) -> int:
             if approval_provider is not None:
                 approval_provider.close()
         print(json.dumps(summary, sort_keys=True, separators=(",", ":")), file=sys.stderr)
-        return 0
+        return 3 if summary["protocol_errors"] else 0
     if args.command == "policy-diff":
         before = load_policy(args.before)
         after = load_policy(args.after)

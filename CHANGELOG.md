@@ -108,6 +108,9 @@ green cross-platform CI run and final review.
 
 ### Fixed
 
+- Made runtime fingerprinting reject unencodable text before child launch and
+  made bounded stdout/stderr reader shutdown deterministic after every session.
+- Made `gateway-stdio` return a non-zero process status after a protocol error.
 - Marked embedded generated-policy fragments as drafts too, so extracting the
   inner object cannot bypass the explicit human-review boundary.
 - Made duplicate-excluding policy budgets use a value-aware, one-way action

@@ -96,12 +96,15 @@ def _discover(
         directory, depth = stack.pop()
         try:
             with os.scandir(directory) as iterator:
-                entries = sorted(iterator, key=lambda item: item.name.casefold())
+                entries = []
+                for entry in iterator:
+                    entry_count += 1
+                    if entry_count > MAX_DIRECTORY_ENTRIES:
+                        raise InputError("Workspace traversal exceeds the directory-entry limit.")
+                    entries.append(entry)
+                entries.sort(key=lambda item: item.name.casefold())
         except OSError as exc:
             raise InputError("Workspace directory could not be read safely.") from exc
-        entry_count += len(entries)
-        if entry_count > MAX_DIRECTORY_ENTRIES:
-            raise InputError("Workspace traversal exceeds the directory-entry limit.")
         for entry in entries:
             path = Path(entry.path)
             relative = path.relative_to(root).as_posix()
@@ -324,6 +327,7 @@ def _validate_inventory_document(data: dict[str, Any]) -> list[dict[str, Any]]:
         if (
             not isinstance(path, str)
             or not path
+            or len(path) > 1024
             or PurePosixPath(path).is_absolute()
             or ".." in PurePosixPath(path).parts
             or path in seen

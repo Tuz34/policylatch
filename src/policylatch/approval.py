@@ -22,7 +22,10 @@ _NON_APPROVABLE_RULES = frozenset({"gateway.tasks.unsupported"})
 
 
 def _fingerprint(label: str, value: Any) -> str:
-    encoded = canonical_json({"contract": label, "value": value}).encode("utf-8")
+    try:
+        encoded = canonical_json({"contract": label, "value": value}).encode("utf-8")
+    except (TypeError, ValueError, UnicodeEncodeError, RecursionError) as exc:
+        raise InputError("Approval value cannot be safely fingerprinted.") from exc
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 

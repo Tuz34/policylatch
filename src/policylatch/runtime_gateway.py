@@ -55,6 +55,10 @@ def parse_upstream_config(data: dict[str, Any], source: str | Path) -> UpstreamC
         raise RuntimeGatewayError(
             f"Upstream config server_id must be 1-{MAX_SERVER_ID_CHARS} characters."
         )
+    try:
+        server_id.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise RuntimeGatewayError("Upstream config server_id must be valid UTF-8 text.") from exc
     argv = data.get("argv")
     if (
         not isinstance(argv, list)
@@ -71,6 +75,11 @@ def parse_upstream_config(data: dict[str, Any], source: str | Path) -> UpstreamC
         raise RuntimeGatewayError(
             f"Upstream config argv must contain 1-{MAX_UPSTREAM_ARGV} bounded strings."
         )
+    try:
+        for item in argv:
+            item.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise RuntimeGatewayError("Upstream config argv must be valid UTF-8 text.") from exc
     cwd_value = data.get("cwd")
     cwd: str | None
     if cwd_value is None:
@@ -98,7 +107,11 @@ def upstream_identity(config: UpstreamConfig) -> str:
         "argv": list(config.argv),
         "cwd": config.cwd,
     }
-    digest = hashlib.sha256(canonical_json(projection).encode("utf-8")).hexdigest()
+    try:
+        encoded = canonical_json(projection).encode("utf-8")
+    except (TypeError, ValueError, UnicodeEncodeError, RecursionError) as exc:
+        raise RuntimeGatewayError("Upstream identity cannot be safely fingerprinted.") from exc
+    digest = hashlib.sha256(encoded).hexdigest()
     return f"sha256:{digest}"
 
 
@@ -109,19 +122,30 @@ class _LineReader:
         self._queue: queue.Queue[bytes | BaseException] = queue.Queue(
             maxsize=MAX_UPSTREAM_NOTIFICATIONS
         )
+        self._stop = threading.Event()
         self._thread = threading.Thread(target=self._read, daemon=True)
         self._thread.start()
 
     def _read(self) -> None:
-        while True:
+        while not self._stop.is_set():
             try:
                 raw = self._stream.readline(self._max_bytes + 1)
             except BaseException as exc:  # pragma: no cover - defensive stream boundary
-                self._queue.put(exc)
+                self._put(exc)
                 return
-            self._queue.put(raw)
+            if not self._put(raw):
+                return
             if not raw:
                 return
+
+    def _put(self, value: bytes | BaseException) -> bool:
+        while not self._stop.is_set():
+            try:
+                self._queue.put(value, timeout=0.05)
+            except queue.Full:
+                continue
+            return True
+        return False
 
     def next(self, timeout_seconds: float) -> bytes:
         try:
@@ -135,6 +159,10 @@ class _LineReader:
         if value and not value.endswith(b"\n"):
             raise RuntimeGatewayError("Upstream response is not newline-delimited.")
         return value
+
+    def close(self) -> None:
+        self._stop.set()
+        self._thread.join(timeout=0.5)
 
 
 class _StderrDrainer:
@@ -153,6 +181,9 @@ class _StderrDrainer:
             self.bytes_seen += len(chunk)
             if self.bytes_seen > MAX_STDERR_BYTES:
                 self.truncated = True
+
+    def close(self) -> None:
+        self._thread.join(timeout=0.5)
 
 
 def _parse_json_line(raw: bytes, label: str) -> dict[str, Any]:
@@ -325,24 +356,30 @@ def _validate_initialize_response(response: dict[str, Any]) -> None:
         raise RuntimeGatewayError("Upstream initialize capabilities must be an object.")
 
 
-def _stop_process(process: subprocess.Popen[bytes]) -> None:
+def _stop_process(process: subprocess.Popen[bytes]) -> bool:
     if process.stdin is not None:
-        with suppress(OSError):
+        with suppress(OSError, ValueError):
             process.stdin.close()
     if process.poll() is None:
         try:
             process.wait(timeout=0.5)
         except subprocess.TimeoutExpired:
-            process.terminate()
+            with suppress(OSError):
+                process.terminate()
             try:
                 process.wait(timeout=1.0)
             except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=1.0)
+                with suppress(OSError):
+                    process.kill()
+                with suppress(OSError, subprocess.TimeoutExpired):
+                    process.wait(timeout=1.0)
+        except OSError:
+            pass
     for stream in (process.stdout, process.stderr):
         if stream is not None:
-            with suppress(OSError):
+            with suppress(OSError, ValueError):
                 stream.close()
+    return process.poll() is not None
 
 
 def run_stdio_gateway(
@@ -359,6 +396,12 @@ def run_stdio_gateway(
         raise RuntimeGatewayError("Runtime forwarding requires enabled=True.")
     if not 0.05 <= timeout_seconds <= 300:
         raise RuntimeGatewayError("Runtime timeout must be between 0.05 and 300 seconds.")
+    identity = upstream_identity(config)
+    child_cleaned_up = False
+    try:
+        policy_hash = canonical_policy_hash(policy)
+    except (TypeError, ValueError, UnicodeEncodeError, RecursionError) as exc:
+        raise RuntimeGatewayError("Runtime policy cannot be safely fingerprinted.") from exc
     try:
         process = subprocess.Popen(
             list(config.argv),
@@ -375,15 +418,13 @@ def run_stdio_gateway(
         _stop_process(process)
         raise RuntimeGatewayError("Upstream stdio pipes are unavailable.")
 
-    reader = _LineReader(process.stdout, max_bytes=MAX_GATEWAY_REQUEST_BYTES)
-    stderr = _StderrDrainer(process.stderr)
     state = "new"
     seen_ids: set[str | int] = set()
     summary = {
         "schema_version": 1,
         "kind": "stdio_gateway_session",
-        "upstream_fingerprint": upstream_identity(config),
-        "policy_hash": canonical_policy_hash(policy),
+        "upstream_fingerprint": identity,
+        "policy_hash": policy_hash,
         "forwarded": 0,
         "blocked": 0,
         "approved": 0,
@@ -397,7 +438,11 @@ def run_stdio_gateway(
         "stderr_truncated": False,
         "child_cleaned_up": False,
     }
+    reader: _LineReader | None = None
+    stderr: _StderrDrainer | None = None
     try:
+        reader = _LineReader(process.stdout, max_bytes=MAX_GATEWAY_REQUEST_BYTES)
+        stderr = _StderrDrainer(process.stderr)
         for _ in range(MAX_SESSION_MESSAGES):
             raw = client_input.readline(MAX_GATEWAY_REQUEST_BYTES + 1)
             if not raw:
@@ -542,7 +587,13 @@ def run_stdio_gateway(
         else:
             raise RuntimeGatewayError("Runtime session exceeds the message-count limit.")
     finally:
-        _stop_process(process)
-        summary["stderr_truncated"] = stderr.truncated
-        summary["child_cleaned_up"] = process.poll() is not None
+        child_cleaned_up = _stop_process(process)
+        if reader is not None:
+            reader.close()
+        if stderr is not None:
+            stderr.close()
+            summary["stderr_truncated"] = stderr.truncated
+        summary["child_cleaned_up"] = child_cleaned_up
+    if not child_cleaned_up:
+        raise RuntimeGatewayError("Upstream child could not be cleaned up deterministically.")
     return summary

@@ -240,6 +240,16 @@ def test_duplicate_json_keys_and_non_finite_numbers_fail_closed():
         assert summary["protocol_errors"] == 1
 
 
+def test_unencodable_approval_value_fails_closed_and_cleans_child():
+    provider = TerminalApprovalProvider(io.StringIO("approve\n"), io.StringIO(), timeout_seconds=1)
+    request = call("surrogate", "read_file", {"path": "safe", "unknown": "\ud800"})
+    summary, payloads = run_session(initialize_messages(request), approval_provider=provider)
+
+    assert payloads[-1]["error"]["code"] == -32042
+    assert summary["protocol_errors"] == 1
+    assert summary["child_cleaned_up"] is True
+
+
 def test_protocol_error_before_initialize_is_local_and_closes_child():
     summary, payloads = run_session(
         io.BytesIO(line(call("too-early", "read_file", {"path": "safe"})))
@@ -369,6 +379,44 @@ def test_gateway_stdio_cli_keeps_protocol_on_stdout_and_summary_redacted(tmp_pat
     assert summary["forwarded"] == 3
     assert summary["child_cleaned_up"] is True
     assert marker.encode() not in completed.stderr
+
+
+def test_gateway_stdio_cli_protocol_error_has_nonzero_process_status(tmp_path):
+    config_path = tmp_path / "upstream.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "server_id": "synthetic-cli-invalid",
+                "argv": [sys.executable, str(FAKE_SERVER)],
+                "cwd": str(ROOT),
+            }
+        ),
+        encoding="utf-8",
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "policylatch.cli",
+            "gateway-stdio",
+            "--upstream-config",
+            str(config_path),
+            "--policy",
+            str(ROOT / "examples/policies/gateway-strict.yaml"),
+            "--enable-forwarding",
+        ],
+        input=b"not-json\n",
+        capture_output=True,
+        cwd=ROOT,
+        env={**os.environ, "PYTHONPATH": str(ROOT / "src")},
+        timeout=10,
+        check=False,
+    )
+
+    assert completed.returncode == 3
+    assert json.loads(completed.stdout)["error"]["code"] == -32042
+    assert json.loads(completed.stderr)["protocol_errors"] == 1
 
 
 def test_bundled_synthetic_upstream_config_is_bounded_and_resolves_to_repo():

@@ -73,6 +73,14 @@ def test_workspace_scan_is_bounded_and_fail_closed(tmp_path, monkeypatch):
         workspace_scan_document(tmp_path, POLICY, "strict")
 
 
+def test_workspace_directory_entry_budget_is_checked_during_iteration(tmp_path, monkeypatch):
+    write_manifest(tmp_path / "mcp.json")
+    (tmp_path / "unrelated.txt").write_text("synthetic", encoding="utf-8")
+    monkeypatch.setattr("policylatch.workspace.MAX_DIRECTORY_ENTRIES", 1)
+    with pytest.raises(InputError, match="directory-entry"):
+        workspace_scan_document(tmp_path, POLICY, "strict")
+
+
 def test_workspace_total_bytes_depth_and_extra_pattern_are_explicit(tmp_path):
     custom = tmp_path / "custom/server-config.json"
     write_manifest(custom)
