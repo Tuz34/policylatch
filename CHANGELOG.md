@@ -21,6 +21,9 @@ green cross-platform CI run and final review.
 
 ### Added
 
+- Deterministic before/after policy simulation over shared synthetic fixtures,
+  with all decision transitions, configurable relaxation gates, redacted
+  receipts/provenance, rule-change heuristics, and counterexample suggestions.
 - YAML policy budgets for call, impact, unique-target, per-tool, payload-class,
   and retry-aware cumulative caps with reservation-first journal checks and
   fail-closed unknown state.

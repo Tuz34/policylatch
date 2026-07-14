@@ -32,6 +32,7 @@ from .journal import (
 )
 from .models import aggregate
 from .policy import PolicyError, load_policy, load_profile, policy_provenance
+from .policy_diff import POLICY_DIFF_GATES, policy_diff_document, policy_diff_markdown
 from .policy_draft import (
     policy_coverage_document,
     policy_draft_document,
@@ -279,6 +280,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=["json", "markdown", "html", "sarif"], default="json"
     )
     budget_check.add_argument("--output")
+    policy_diff = sub.add_parser(
+        "policy-diff",
+        help="Simulate the same synthetic fixture corpus before and after a policy change.",
+    )
+    policy_diff.add_argument("--before", required=True)
+    policy_diff.add_argument("--after", required=True)
+    policy_diff.add_argument("--fixtures", required=True)
+    policy_diff.add_argument("--fail-on", choices=POLICY_DIFF_GATES, default="deny-to-allow")
+    policy_diff.add_argument("--format", choices=["json", "markdown", "sarif"], default="json")
+    policy_diff.add_argument("--output")
     policy_init = sub.add_parser(
         "policy-init", help="Generate a non-enforceable policy draft or check policy coverage."
     )
@@ -500,6 +511,26 @@ def _explain_markdown(payload: dict[str, Any]) -> str:
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "policy-diff":
+        before = load_policy(args.before)
+        after = load_policy(args.after)
+        payload = policy_diff_document(
+            load_policy_fixtures(args.fixtures),
+            before,
+            after,
+            Path(args.before).name,
+            Path(args.after).name,
+            args.fixtures,
+            args.fail_on,
+        )
+        validate_report(payload)
+        rendered = {
+            "json": json_report,
+            "markdown": policy_diff_markdown,
+            "sarif": sarif_report,
+        }[args.format](payload)
+        _write(rendered, args.output)
+        return 2 if payload["gate"]["failed"] else 0
     if args.command == "budget-check":
         policy, label = _selected_policy(args)
         payload = budget_check_document(

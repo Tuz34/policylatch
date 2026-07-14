@@ -69,16 +69,7 @@ def policy_test_document(
         expected = fixture.get("_expected")
         if expected not in VALID_DECISIONS:
             raise InputError(f"Fixture '{name}' _expected must be allow, warn, or deny.")
-        kind = fixture.get("_kind")
-        if kind not in {None, "action", "gateway"}:
-            raise InputError(f"Fixture '{name}' _kind must be action or gateway.")
-        evaluator_input = {key: value for key, value in fixture.items() if not key.startswith("_")}
-        is_gateway = kind == "gateway" or (kind is None and "jsonrpc" in evaluator_input)
-        evaluation = (
-            evaluate_mcp_request(evaluator_input, policy).evaluation
-            if is_gateway
-            else evaluate_action(evaluator_input, policy)
-        )
+        evaluation = evaluate_policy_fixture(name, fixture, policy)
         passed = evaluation.decision == expected
         failures += not passed
         result = {
@@ -112,6 +103,24 @@ def policy_test_document(
         "summary": {"total": len(results), "passed": len(results) - failures, "failed": failures},
         "results": results,
     }
+
+
+def policy_fixture_input(name: str, fixture: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    kind = fixture.get("_kind")
+    if kind not in {None, "action", "gateway"}:
+        raise InputError(f"Fixture '{name}' _kind must be action or gateway.")
+    evaluator_input = {key: value for key, value in fixture.items() if not key.startswith("_")}
+    is_gateway = kind == "gateway" or (kind is None and "jsonrpc" in evaluator_input)
+    return evaluator_input, is_gateway
+
+
+def evaluate_policy_fixture(name: str, fixture: dict[str, Any], policy: dict[str, Any]):
+    evaluator_input, is_gateway = policy_fixture_input(name, fixture)
+    return (
+        evaluate_mcp_request(evaluator_input, policy).evaluation
+        if is_gateway
+        else evaluate_action(evaluator_input, policy)
+    )
 
 
 def _finding(rule: str, matched: str, message: str) -> dict[str, str]:

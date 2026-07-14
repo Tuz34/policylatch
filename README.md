@@ -197,6 +197,18 @@ policylatch budget-check --input report.json --journal audit.jsonl \
 Missing, corrupt, changing, unconfirmed, or unreserved state denies as unknown.
 See [policy budgets](docs/policy-budgets.md).
 
+Before merging a policy change, replay the same synthetic contract-test corpus
+and gate dangerous relaxations:
+
+```bash
+policylatch policy-diff --before policy-before.yaml --after policy-after.yaml \
+  --fixtures examples/policy-tests --fail-on deny-to-allow --format markdown
+```
+
+The [policy diff simulator](docs/policy-diff.md) reports redacted transition
+receipts, rule-change heuristics, and counterexample fixture suggestions without
+executing tools or changing either policy.
+
 Exit codes are automation-friendly: `0` allow, `1` warn, `2` deny, and `3` invalid input or policy.
 
 ## Policy example

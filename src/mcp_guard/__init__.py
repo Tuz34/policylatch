@@ -25,6 +25,7 @@ _MODULES = (
     "models",
     "policy",
     "policy_draft",
+    "policy_diff",
     "policy_tooling",
     "profiles",
     "receipts",
