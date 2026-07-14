@@ -118,7 +118,11 @@ def test_service_close_failure_does_not_mask_query_failure(monkeypatch):
 
     backend = object.__new__(_CtypesServiceStatusBackend)
     backend._api = FailingApi()
-    monkeypatch.setattr("mcp_guard.windows_service.ctypes.get_last_error", lambda: 123)
+    monkeypatch.setattr(
+        "mcp_guard.windows_service.ctypes.get_last_error",
+        lambda: 123,
+        raising=False,
+    )
 
     with pytest.raises(ProviderReadError, match="runtime state could not be queried"):
         backend.read_runtime_state("SyntheticDemoService")
