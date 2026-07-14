@@ -70,6 +70,8 @@ green cross-platform CI run and final review.
   capability is present, and reject calls with two conflicting network targets.
 - Allowlist-miss findings no longer copy a raw destination hostname into JSON,
   Markdown, HTML, or gateway replay output.
+- The reusable Action now rejects multiline report paths before writing step
+  outputs and emits output values with fixed `printf` formats.
 - Verified Windows audit records now require the comparison provenance format
   `snapshot_comparison:<before-source>-><after-source>`; unmarked verified claims
   are rejected by `audit-append`.

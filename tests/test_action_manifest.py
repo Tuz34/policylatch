@@ -35,3 +35,13 @@ def test_composite_action_runs_only_the_local_policylatch_cli():
     assert "curl" not in scripts
     assert "Invoke-WebRequest" not in scripts
     assert "powershell" not in scripts.lower()
+
+
+def test_composite_action_rejects_multiline_output_paths_before_writing_outputs():
+    manifest = yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))
+    script = next(step["run"] for step in manifest["runs"]["steps"] if step.get("id") == "guard")
+
+    assert "*$'\\n'*|*$'\\r'*" in script
+    assert "output-file must be a non-empty single-line path" in script
+    assert "printf 'report-path=%s\\n'" in script
+    assert 'echo "report-path=$POLICYLATCH_OUTPUT"' not in script
