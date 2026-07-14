@@ -77,7 +77,7 @@ def html_report(data: dict[str, Any]) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <title>mcp-guard report - {_text(decision).upper()}</title>
+  <title>PolicyLatch report - {_text(decision).upper()}</title>
   <style>
     :root {{
       color-scheme: dark;
@@ -167,7 +167,7 @@ def html_report(data: dict[str, Any]) -> str:
   <main>
     <header>
       <div>
-        <div class="brand"><span class="brand-mark" aria-hidden="true">G</span>mcp-guard</div>
+        <div class="brand"><span class="brand-mark" aria-hidden="true">P</span>PolicyLatch</div>
         <h1>Permission report</h1>
         <p class="eyebrow">Pre-flight policy evaluation for MCP tools and AI agents</p>
       </div>

@@ -3,12 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from mcp_guard.gateway_trace import (
+from policylatch.gateway_trace import (
     GatewayTraceError,
     gateway_trace_document,
     load_gateway_trace,
 )
-from mcp_guard.policy import load_policy
+from policylatch.policy import load_policy
 
 ROOT = Path(__file__).parents[1]
 POLICY = load_policy(ROOT / "examples/policies/gateway-strict.yaml")
@@ -46,7 +46,7 @@ def test_trace_reports_invalid_line_number(tmp_path):
 def test_trace_rejects_oversized_line_with_bounded_reader(tmp_path, monkeypatch):
     path = tmp_path / "oversized.jsonl"
     path.write_bytes(b"x" * 33)
-    monkeypatch.setattr("mcp_guard.gateway_trace.MAX_TRACE_LINE_BYTES", 32)
+    monkeypatch.setattr("policylatch.gateway_trace.MAX_TRACE_LINE_BYTES", 32)
 
     with pytest.raises(GatewayTraceError, match="line 1 is too large"):
         load_gateway_trace(path, POLICY)
@@ -71,7 +71,7 @@ def test_trace_rejects_record_limit(tmp_path):
 def test_trace_rejects_total_byte_limit(tmp_path, monkeypatch):
     path = tmp_path / "total-limit.jsonl"
     path.write_bytes(b" \n \n")
-    monkeypatch.setattr("mcp_guard.gateway_trace.MAX_TRACE_TOTAL_BYTES", 3)
+    monkeypatch.setattr("policylatch.gateway_trace.MAX_TRACE_TOTAL_BYTES", 3)
 
     with pytest.raises(GatewayTraceError, match="total limit"):
         load_gateway_trace(path, POLICY)

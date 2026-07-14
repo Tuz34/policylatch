@@ -1,6 +1,6 @@
 from html.parser import HTMLParser
 
-from mcp_guard.html_report import html_report
+from policylatch.html_report import html_report
 
 
 class _Parser(HTMLParser):
@@ -37,6 +37,7 @@ def test_html_report_is_self_contained_and_semantic():
     parser = _Parser()
     parser.feed(report)
     assert report.startswith("<!doctype html>")
+    assert "PolicyLatch" in report
     assert '<html lang="en">' in report
     assert "Overall decision" not in report
     assert 'aria-label="Decision summary"' in report

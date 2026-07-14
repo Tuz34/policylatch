@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from mcp_guard.gateway import (
+from policylatch.gateway import (
     MAX_REQUEST_ID_CHARS,
     MAX_TOOL_NAME_CHARS,
     evaluate_mcp_request,
     parse_mcp_tool_call,
 )
-from mcp_guard.policy import load_policy
-from mcp_guard.validation import InputError
+from policylatch.policy import load_policy
+from policylatch.validation import InputError
 
 ROOT = Path(__file__).parents[1]
 POLICY = load_policy(ROOT / "examples/policies/gateway-strict.yaml")

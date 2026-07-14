@@ -1,6 +1,6 @@
 import json
 
-from mcp_guard.sarif_report import sarif_document, sarif_report
+from policylatch.sarif_report import sarif_document, sarif_report
 
 
 def _scan_result(source="examples/mcp/risky-server.json"):
@@ -47,7 +47,7 @@ def test_sarif_document_has_github_compatible_core_fields():
 
     assert document["$schema"].endswith("sarif-2.1.0.json")
     assert document["version"] == "2.1.0"
-    assert run["tool"]["driver"]["name"] == "mcp-guard"
+    assert run["tool"]["driver"]["name"] == "policylatch"
     assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
         "mcp_tools.deny_if_description_contains",
         "mcp_tools.warn_if_name_contains",

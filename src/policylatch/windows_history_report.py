@@ -112,7 +112,7 @@ def history_html_report(data: dict[str, Any]) -> str:
     return f"""<!doctype html>
 <html lang="en"><head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light">
-  <title>mcp-guard Windows audit history</title>
+  <title>PolicyLatch Windows audit history</title>
   <style>
     :root {{ color-scheme:dark;--bg:#0b0f14;--panel:#111821;--line:#2a3746;--text:#edf3f8;--muted:#9eacba;--proposed:#79c0ff;--observed:#f0b84b;--verified:#57d27d;font:13px/1.45 Inter,system-ui,sans-serif; }}
     * {{ box-sizing:border-box; }} body {{ margin:0;background:var(--bg);color:var(--text); }} main {{ width:min(1180px,calc(100% - 24px));margin:auto;padding:22px 0 36px; }}

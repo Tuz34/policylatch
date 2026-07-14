@@ -1,4 +1,4 @@
-from mcp_guard.reports import markdown_report
+from policylatch.reports import markdown_report
 
 
 def test_markdown_report_escapes_user_controlled_structure():
@@ -24,6 +24,7 @@ def test_markdown_report_escapes_user_controlled_structure():
             ],
         }
     )
+    assert report.startswith("# PolicyLatch report")
     assert "demo' source.json" in report
     assert "tool\\|name next" in report
     assert "`exec' value`" in report

@@ -56,7 +56,7 @@ def _table_cell(value: Any) -> str:
 def markdown_report(data: dict[str, Any]) -> str:
     rows = validate_report(data)
     lines = [
-        "# mcp-guard report",
+        "# PolicyLatch report",
         "",
         f"Source: `{_inline_code(data.get('source', 'action'))}`",
         "",
@@ -87,7 +87,7 @@ def markdown_report(data: dict[str, Any]) -> str:
         lines.append("No policy findings.")
     lines += [
         "",
-        "> mcp-guard evaluates proposed actions; it does not execute tools or provide a sandbox.",
+        "> PolicyLatch evaluates proposed actions; it does not execute tools or provide a sandbox.",
         "",
     ]
     return "\n".join(lines)

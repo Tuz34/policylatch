@@ -15,10 +15,9 @@ def test_windows_modules_contain_no_mutation_or_command_execution_api():
         "powershell",
         "netsh",
     }
-    sources = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in sorted((ROOT / "src/mcp_guard").glob("windows_*.py"))
-    )
+    paths = sorted((ROOT / "src/policylatch").glob("windows_*.py"))
+    assert paths
+    sources = "\n".join(path.read_text(encoding="utf-8") for path in paths)
 
     assert forbidden.isdisjoint(sources.split())
     for token in forbidden:

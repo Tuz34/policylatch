@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-guard"
+name = "policylatch"
 version = "0.1.0"
 description = "A local-first permission gateway for MCP tool calls and AI agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "mcp-guard contributors" }]
+authors = [{ name = "PolicyLatch contributors" }]
 keywords = ["mcp", "ai-agents", "security", "cli"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -28,10 +28,11 @@ dependencies = ["PyYAML>=6.0,<7"]
 dev = ["build>=1.2", "pytest>=8,<9", "ruff>=0.5"]
 
 [project.scripts]
-mcp-guard = "mcp_guard.cli:main"
+policylatch = "policylatch.cli:main"
+mcp-guard = "policylatch.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcp_guard"]
+packages = ["src/policylatch", "src/mcp_guard"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["/PROJECT_CONTEXT.md", "/WORK_LOG.md"]

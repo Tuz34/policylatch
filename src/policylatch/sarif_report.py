@@ -60,7 +60,7 @@ def sarif_document(data: dict[str, Any]) -> dict[str, Any]:
         {
             "id": rule_id,
             "name": rule_id,
-            "shortDescription": {"text": f"mcp-guard policy rule {rule_id}"},
+            "shortDescription": {"text": f"PolicyLatch policy rule {rule_id}"},
             "defaultConfiguration": {"level": rule_levels[rule_id]},
         }
         for rule_id in sorted(rule_levels)
@@ -72,7 +72,7 @@ def sarif_document(data: dict[str, Any]) -> dict[str, Any]:
             {
                 "tool": {
                     "driver": {
-                        "name": "mcp-guard",
+                        "name": "policylatch",
                         "informationUri": "https://github.com/Tuz34/mcp-guard",
                         "semanticVersion": __version__,
                         "rules": rules,

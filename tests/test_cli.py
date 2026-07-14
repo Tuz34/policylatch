@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from mcp_guard.cli import main
-from mcp_guard.gateway import MAX_GATEWAY_REQUEST_BYTES
-from mcp_guard.windows_audit import StateSummary
-from mcp_guard.windows_providers import ObservedWindowsSnapshot
+from policylatch.cli import main
+from policylatch.gateway import MAX_GATEWAY_REQUEST_BYTES
+from policylatch.windows_audit import StateSummary
+from policylatch.windows_providers import ObservedWindowsSnapshot
 
 ROOT = Path(__file__).parents[1]
 
@@ -36,7 +36,7 @@ def test_report_writes_markdown(tmp_path):
     output = tmp_path / "report.md"
     source.write_text(json.dumps({"decision": "allow", "risk_level": "low", "reasons": []}))
     assert main(["report", "--input", str(source), "--output", str(output)]) == 0
-    assert "# mcp-guard report" in output.read_text()
+    assert "# PolicyLatch report" in output.read_text()
 
 
 def test_scan_writes_aggregate_summary(tmp_path):
@@ -287,7 +287,7 @@ def test_check_and_scan_emit_sarif_to_stdout(capsys, command, input_flag, input_
     payload = json.loads(capsys.readouterr().out)
     assert code == 2
     assert payload["version"] == "2.1.0"
-    assert payload["runs"][0]["tool"]["driver"]["name"] == "mcp-guard"
+    assert payload["runs"][0]["tool"]["driver"]["name"] == "policylatch"
     assert payload["runs"][0]["results"]
 
 
@@ -426,7 +426,7 @@ def test_windows_snapshot_cli_writes_observed_summary(tmp_path, monkeypatch, pro
             state=StateSummary(present=True),
         )
 
-    monkeypatch.setattr("mcp_guard.cli.collect_windows_snapshot", synthetic_collect)
+    monkeypatch.setattr("policylatch.cli.collect_windows_snapshot", synthetic_collect)
 
     code = main(
         [

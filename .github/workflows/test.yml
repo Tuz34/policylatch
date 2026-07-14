@@ -44,7 +44,7 @@ jobs:
       - name: Read-only Windows integration checks
         if: runner.os == 'Windows'
         env:
-          MCP_GUARD_WINDOWS_INTEGRATION: "1"
+          POLICYLATCH_WINDOWS_INTEGRATION: "1"
         run: pytest tests/test_windows_integration.py
       - run: ruff check .
       - run: ruff format --check .

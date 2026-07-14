@@ -4,19 +4,19 @@ These tests never run during the default local suite. They query only fixed,
 non-secret Windows surfaces and do not mutate system state.
 """
 
-import os
 import platform
 
 import pytest
 
-from mcp_guard.windows_audit import SAFE_FACT_VALUES
-from mcp_guard.windows_providers import collect_windows_snapshot
-from mcp_guard.windows_registry import RegistryKeyPresenceProvider
-from mcp_guard.windows_service import ServiceRuntimeProvider
-from mcp_guard.windows_settings import FirewallProfileProvider, LongPathsPolicyProvider
+from policylatch.environment import windows_integration_enabled
+from policylatch.windows_audit import SAFE_FACT_VALUES
+from policylatch.windows_providers import collect_windows_snapshot
+from policylatch.windows_registry import RegistryKeyPresenceProvider
+from policylatch.windows_service import ServiceRuntimeProvider
+from policylatch.windows_settings import FirewallProfileProvider, LongPathsPolicyProvider
 
 pytestmark = pytest.mark.skipif(
-    platform.system() != "Windows" or os.getenv("MCP_GUARD_WINDOWS_INTEGRATION") != "1",
+    platform.system() != "Windows" or not windows_integration_enabled(),
     reason="requires explicit opt-in on a Windows CI runner",
 )
 

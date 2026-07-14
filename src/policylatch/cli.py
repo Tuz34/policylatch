@@ -77,7 +77,7 @@ def _write(content: str, output: str | None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="mcp-guard",
+        prog="policylatch",
         description="Local permission decisions for MCP tool calls and AI agents.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -292,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
         OSError,
         ValueError,
     ) as exc:
-        print(f"mcp-guard: error: {exc}", file=sys.stderr)
+        print(f"policylatch: error: {exc}", file=sys.stderr)
         return 3
 
 
