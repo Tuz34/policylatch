@@ -22,6 +22,9 @@ green cross-platform CI run and final review.
 - Composite GitHub Action support for synthetic no-forward `gateway-check` runs.
 - Bounded no-forward `gateway-replay` for synthetic JSONL traces, with per-line,
   total-size, record-count, identifier, and nesting limits.
+- Versioned MCP protocol baseline and a documented stdio threat model covering
+  bypass, confused-deputy, replay, task lifecycle, backpressure, cleanup, and
+  fail-closed invariants.
 - Reusable composite GitHub Action for `check` and `scan`, with explicit decision,
   exit-code, report-path, and fail-threshold outputs.
 - Deterministic SARIF 2.1.0 reports for GitHub Code Scanning, with deduplicated

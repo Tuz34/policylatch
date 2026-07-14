@@ -67,6 +67,27 @@ def test_gateway_denies_explicit_name_pattern():
     assert any(reason.rule == "mcp_tools.deny_names" for reason in result.evaluation.reasons)
 
 
+def test_gateway_warns_on_unclassified_non_empty_arguments():
+    result = evaluate_mcp_request(request("read_file", {"file_path": "project/.env"}), POLICY)
+
+    assert result.evaluation.decision == "warn"
+    assert result.capabilities == ("unclassified",)
+    assert result.evaluation.reasons[0].rule == "gateway.arguments.unclassified"
+
+
+def test_gateway_warns_on_experimental_task_augmented_call():
+    payload = request("read_file", {"path": "docs/README.md"})
+    payload["params"]["task"] = {"ttl": 60_000}
+
+    result = evaluate_mcp_request(payload, POLICY)
+    output = result.to_dict(source="synthetic.json")
+
+    assert result.evaluation.decision == "warn"
+    assert output["request"]["task_augmented"] is True
+    assert any(reason.rule == "gateway.tasks.unsupported" for reason in result.evaluation.reasons)
+    assert "ttl" not in json.dumps(output)
+
+
 @pytest.mark.parametrize(
     "broken,match",
     [

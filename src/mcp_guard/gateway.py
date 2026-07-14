@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .evaluator import evaluate_action
-from .models import Evaluation, decision_for, risk_for
+from .models import Evaluation, Reason, decision_for, risk_for
 from .policy import default_decision
 from .tool_policy import tool_name_is_allowed, tool_name_reasons
 from .validation import InputError
@@ -19,6 +19,7 @@ class McpToolCall:
     request_id: str | int | None
     name: str
     arguments: dict[str, Any]
+    task_augmented: bool = False
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class GatewayResult:
                 "id": self.call.request_id,
                 "method": "tools/call",
                 "tool": self.call.name,
+                "task_augmented": self.call.task_augmented,
             },
             "capabilities": list(self.capabilities),
             **self.evaluation.to_dict(),
@@ -76,7 +78,15 @@ def parse_mcp_tool_call(request: dict[str, Any]) -> McpToolCall:
     arguments = params.get("arguments", {})
     if not isinstance(arguments, dict):
         raise InputError("MCP tools/call params.arguments must be an object when provided.")
-    return McpToolCall(request_id=request_id, name=name, arguments=arguments)
+    task = params.get("task")
+    if "task" in params and not isinstance(task, dict):
+        raise InputError("MCP tools/call params.task must be an object when provided.")
+    return McpToolCall(
+        request_id=request_id,
+        name=name,
+        arguments=arguments,
+        task_augmented="task" in params,
+    )
 
 
 def _capability_actions(call: McpToolCall) -> list[dict[str, Any]]:
@@ -120,6 +130,24 @@ def evaluate_mcp_request(request: dict[str, Any], policy: dict[str, Any]) -> Gat
     mcp_rules = policy["rules"].get("mcp_tools", {})
     reasons = tool_name_reasons(call.name, mcp_rules)
     actions = _capability_actions(call)
+    if call.task_augmented:
+        reasons.append(
+            Reason(
+                "gateway.tasks.unsupported",
+                "warn",
+                "task",
+                "Task-augmented tool calls need an explicit lifecycle policy.",
+            )
+        )
+    if call.arguments and not actions:
+        reasons.append(
+            Reason(
+                "gateway.arguments.unclassified",
+                "warn",
+                "unclassified",
+                "Tool arguments need an explicit capability mapping before enforcement.",
+            )
+        )
 
     # Argument projections must only contribute explicit findings. Gateway-level
     # allow-list/default handling is applied once after all projections are checked.

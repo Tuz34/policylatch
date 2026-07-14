@@ -158,7 +158,8 @@ An MCP manifest uses a top-level `tools` array (or `server.tools`). Each tool ma
 The experimental gateway input is one JSON-RPC 2.0 `tools/call` request. It
 checks the complete tool name and recognized top-level `command`, `path`, `url`,
 and `domain` arguments. See the [gateway contract](docs/gateway.md) for the exact
-trust boundary and known bypasses.
+runtime boundary, and the [gateway threat model](docs/gateway-threat-model.md) for
+known bypasses and the forwarding go/no-go criteria.
 
 All files under [`examples`](examples) are deliberately synthetic. They contain no real credentials, endpoints, or user data.
 

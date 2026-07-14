@@ -44,6 +44,11 @@ Trace replay additionally caps each line at 1 MiB, the full trace at 8 MiB, and
 the evaluated record count at 1,000. It reads incrementally and aborts the entire
 replay on the first invalid record.
 
+The stable 2025-11-25 MCP revision introduced experimental task-augmented tool
+calls. The current gateway records only a `task_augmented` boolean and returns
+`warn`; it does not copy task metadata or claim to support the asynchronous task
+lifecycle.
+
 ## Policy projection
 
 The tool name is checked against `mcp_tools.allow_names`, `deny_names`, and
@@ -61,8 +66,9 @@ policy engine:
 
 If multiple recognized capabilities are present, all are evaluated and the most
 restrictive finding wins. Nested arguments and server-specific aliases are not
-inferred. A future adapter must declare such mappings explicitly instead of
-guessing from arbitrary data.
+inferred. A non-empty call with no recognized capability returns `warn`, even
+when the tool name is allowlisted. A future adapter must declare such mappings
+explicitly instead of guessing from arbitrary data.
 
 The decision output includes the request ID, method, tool name, capability names,
 and policy findings. It intentionally does not copy raw `arguments`; source and
