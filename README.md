@@ -5,12 +5,13 @@
 `PolicyLatch` is evolving from a policy-checking CLI into a local gateway that can
 make an explained permission decision before an MCP tool call reaches its server.
 The current codebase provides the deterministic policy engine, manifest scanner,
-reports, and an experimental **no-forward** check for one MCP JSON-RPC
-`tools/call` request.
+reports, no-forward trace checks, and an opt-in experimental stdio enforcement
+gateway for one explicitly configured MCP server.
 
 > [!IMPORTANT]
-> The current gateway check never forwards a request, starts an MCP server, or
-> executes a tool. Live interception is planned work, not a current capability.
+> `gateway-check` and `gateway-replay` never forward. `gateway-stdio` is different:
+> `--enable-forwarding` starts the exact configured argv and can send allowed calls
+> to it. Use the bundled fake server for review; a real server may execute tools.
 
 ## Why?
 
@@ -60,6 +61,19 @@ policylatch gateway-replay \
   --policy examples/policies/gateway-strict.yaml \
   --format markdown
 ```
+
+Exercise the opt-in stdio boundary against the repository's synthetic echo
+server (it never executes request content):
+
+```bash
+policylatch gateway-stdio \
+  --upstream-config examples/gateway/synthetic-upstream.json \
+  --policy examples/policies/gateway-strict.yaml \
+  --enable-forwarding < examples/gateway/synthetic-session.jsonl
+```
+
+See the [gateway contract](docs/gateway.md) for the exact protocol and safety
+boundary.
 
 Evaluate a synthetic runtime hook and generate a review-first configuration
 snippet without changing Claude Code or Codex settings:
@@ -274,7 +288,7 @@ An action is a JSON object. Fields used by v0 depend on `action_type`:
 
 An MCP manifest uses a top-level `tools` array (or `server.tools`). Each tool may provide `name`, `description`, and `inputSchema`. Common client configs with an `mcpServers` mapping are also supported; their declared `command` and `args` are checked as text. The scanner does not connect to an MCP server.
 
-The experimental gateway input is one JSON-RPC 2.0 `tools/call` request. It
+The no-forward gateway input is one JSON-RPC 2.0 `tools/call` request. It
 checks the complete tool name and recognized top-level `command`, `path`, `url`,
 and `domain` arguments. See the [gateway contract](docs/gateway.md) for the exact
 runtime boundary, and the [gateway threat model](docs/gateway-threat-model.md) for
@@ -372,11 +386,11 @@ The product direction is a local MCP permission gateway:
 MCP client -> local gateway -> policy decision -> approval or deny -> MCP server
 ```
 
-Only the policy-facing pieces exist today. `gateway-check` parses and evaluates
-a saved request but always reports `forwarded: false`. A later, separately
-reviewed transport layer will wrap an explicitly configured MCP server and
-enforce the same decision before forwarding. Calls that do not pass through that
-transport cannot be observed or blocked.
+`gateway-check` and `gateway-replay` always report `forwarded: false`.
+Experimental `gateway-stdio` wraps one explicit argv without a shell, forwards
+only `allow`, keeps `warn` and `deny` local, bounds messages/timeouts, and cleans
+up the child on failure. It is opt-in and currently validated only against the
+bundled synthetic server. Calls routed around it cannot be observed or blocked.
 
 ## Agent and CI integration
 
@@ -514,14 +528,13 @@ types, fixtures, and false-positive tests are welcome.
 
 - **v0.1 (current MVP):** Policy checks, MCP/tool manifest scanning, explained
   JSON/Markdown/HTML reports, synthetic examples, and cross-platform tests.
-- **Current development (unreleased):** No-forward `tools/call` gateway checks
-  and bounded synthetic trace replay, explicit tool allow/deny rules, opt-in
+- **Current development (unreleased):** No-forward `tools/call` checks, bounded
+  trace replay, an opt-in fail-closed stdio gateway, explicit tool rules, opt-in
   Windows audit snapshots/history, SARIF, the reusable GitHub Action, and thin
   review-first Claude Code/Codex hook adapters.
-- **Next gateway milestone:** A narrowly scoped stdio transport wrapper with an
-  explicit upstream command, fail-closed limits, synthetic replay tests, and no
-  hidden configuration changes.
-- **Later:** Local approval workflow, workspace baselines, and an optional policy
+- **Next gateway milestone:** Scoped local approvals and a post-flight response
+  gate before reviewed upstream results return to the client.
+- **Later:** Workspace baselines, Git diff gates, and an optional policy
   adapter such as OPA/Rego.
 
 The PolicyLatch name is approved and the compatibility migration is under review.

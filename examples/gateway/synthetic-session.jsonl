@@ -1,0 +1,3 @@
+{"jsonrpc":"2.0","id":"synthetic-init","method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"policylatch-demo","version":"1"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}
+{"jsonrpc":"2.0","id":"synthetic-read","method":"tools/call","params":{"name":"read_file","arguments":{"path":"examples/synthetic/README.txt"}}}

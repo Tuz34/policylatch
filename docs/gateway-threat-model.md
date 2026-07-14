@@ -1,10 +1,11 @@
 # Gateway threat model
 
-Status: design gate for AIA-42. Last reviewed 2026-07-14.
+Status: AIA-42 design gate plus the AIA-48 stdio implementation awaiting review.
+Last updated 2026-07-14.
 
-This document separates the working no-forward evaluator from the planned stdio
-transport wrapper. It is a security contract, not a claim that live interception
-already exists.
+This document separates the no-forward evaluator from the opt-in stdio wrapper.
+The stdio slice has synthetic tests; it is not a claim of transparent or complete
+host enforcement.
 
 ## Protocol baseline
 
@@ -35,7 +36,7 @@ Assets:
 - request/response correlation;
 - sensitive tool arguments that must not enter routine logs or reports.
 
-Planned stdio boundary:
+Implemented stdio boundary:
 
 ```text
 untrusted/model-controlled request
@@ -60,10 +61,11 @@ code.
 |---|---|---:|---|
 | Saved request check | implemented | no | Evaluate one `tools/call` object. |
 | Synthetic trace replay | implemented | no | Evaluate bounded JSONL fixtures. |
-| Stdio enforcement wrapper | planned | not yet | Intercept one configured server. |
+| Stdio enforcement wrapper | implemented, opt-in | allow only | Wrap one explicit argv. |
 | Streamable HTTP | out of current scope | no | Requires separate auth/session/SSE design. |
 
-The current code has no passive/transparent mode. `forwarded` is always `false`.
+The code has no passive/transparent mode. Dry-run results always say
+`forwarded: false`; runtime forwarding requires a separate command and flag.
 
 ## Threats and required controls
 
@@ -71,24 +73,24 @@ The current code has no passive/transparent mode. `forwarded` is always `false`.
 |---|---|---|
 | Gateway bypass through a direct server configuration | Clearly documented limitation | Adapter/doctor must show the effective command and warn about unguarded alternate configs. |
 | Prompt injection or poisoned tool description | Static manifest warnings; policy is not generated from descriptions | Never let tool prose alter policy or approval state. |
-| Unknown or smuggled argument shape | Known keys are type checked; any unknown top-level argument returns `warn`, including mixed known/unknown calls | Bind every enforced tool to its reviewed input schema or explicit argument mapping; unknown mappings fail closed. |
+| Unknown or smuggled argument shape | Known keys are type checked; any unknown top-level argument returns `warn` and is not forwarded | Bind every enforced tool to its reviewed input schema or explicit argument mapping. |
 | Tool-name confusion | Complete case-insensitive glob matching | Bind policy to an explicit upstream server identity as well as tool name. |
-| Confused deputy across servers with the same tool name | No live forwarding exists | Policy lookup key must include server identity; never share approval solely by tool name. |
-| Replay or duplicate request ID | Offline replay has no side effects | Track in-flight IDs per connection; reject duplicate outstanding IDs and never reuse an approval. |
+| Confused deputy across servers with the same tool name | Explicit upstream fingerprint is paired with the policy hash in the session summary | Bind future approvals to both fingerprints; never share approval solely by tool name. |
+| Replay or duplicate request ID | Runtime rejects every reused non-null request ID in one session | Never reuse an approval; define broader reconnect replay semantics separately. |
 | Task-augmented `tools/call` lifecycle confusion | Only a boolean is retained and decision is `warn` | Fail closed until create/get/result/cancel correlation and capability negotiation are implemented. |
-| Oversized or deeply nested input | 1 MiB request/line, 8 MiB trace, 1,000 records, bounded IDs, nesting rejection | Apply byte, depth, queue, and in-flight limits before forwarding. |
-| Backpressure or deadlock | No subprocess or pipe exists | Use bounded queues, pause reads when full, keep stdout protocol-only, and drain stderr separately. |
+| Oversized or deeply nested input | 1 MiB runtime messages, bounded identifiers/session count, JSON recursion rejection | Add explicit structural-depth accounting if supported schemas become more complex. |
+| Backpressure or deadlock | Bounded stdout queue, timed pipe writes, stdout protocol-only, stderr drain/discard | Exercise adversarial real-platform pipe behavior before release. |
 | Gateway crash becoming fail-open | Non-zero CLI exits are documented as closed | Client configuration must point only to the gateway; gateway failure terminates the connection and never launches a bypass path. |
 | Argument or credential leakage | Raw arguments/task metadata and non-allowlisted hostnames are omitted; paths become basenames | Structured summary logs only, opt-in debug redaction, no environment or credential capture. |
 | Policy tampering | Strict schema and local file | Recommend version control; load once per session or use explicit atomic reload with validation. |
-| Shell injection in upstream launch | No upstream launch exists | Use argv without a shell; never build a shell command string. |
-| Orphaned upstream process | No upstream process exists | Deterministic terminate/kill timeout and cleanup on EOF, cancellation, parse failure, or gateway exit. |
+| Shell injection in upstream launch | Strict bounded argv and `shell=False`; no command string | Keep config review explicit. |
+| Orphaned upstream process | Close/wait/terminate/kill cleanup on EOF, timeout, parse failure, or exit | Validate on all CI platforms. |
 | False causality from Windows observations | Proposed/observed/verified states remain separate | Never claim that a snapshot difference was caused by a specific MCP call without supported correlation evidence. |
 
 ## Enforcement invariants
 
-Real stdio forwarding is a no-go until all of these invariants have automated
-tests:
+The first stdio slice is acceptable for synthetic review only while these
+invariants remain tested:
 
 1. Upstream server argv and working directory are explicit and visible.
 2. Launch uses no shell and performs no hidden client configuration changes.
@@ -96,8 +98,7 @@ tests:
 4. `deny`, invalid, oversized, unclassified, and unsupported lifecycle requests
    never reach upstream.
 5. `warn` is closed unless an explicit, scoped approval result exists.
-6. An approval is bound to server identity, tool name, request identity, and a
-   stable digest; it is not reusable for a modified request.
+6. No approval exists in this slice; every `warn` stays closed.
 7. Gateway stdout contains MCP protocol messages only; diagnostics use stderr.
 8. Raw arguments, environment values, and server stderr are not written to normal
    reports or history.
@@ -105,14 +106,14 @@ tests:
 10. EOF, timeout, cancellation, and parse errors clean up the child process and
     pending approvals deterministically.
 
-## Initial engineering budgets
+## Engineering budgets
 
-These are design targets for the first stdio spike, not current performance
-claims:
+Current hard bounds and retained targets:
 
 - maximum JSON-RPC message: 1 MiB;
-- maximum in-flight requests: 64;
-- maximum buffered data per direction: 8 MiB;
+- sequential request/response correlation with no concurrent in-flight calls;
+- maximum queued upstream messages: 64, each at most 1 MiB;
+- maximum messages per session: 10,000;
 - policy decision target: under 10 ms p95 for a typical request up to 64 KiB,
   measured in a repeatable local benchmark;
 - no unbounded retry, queue, history, or stderr capture.
@@ -136,8 +137,8 @@ connection, or timing out means reject.
 
 ## Go/no-go decision
 
-The no-forward parser and trace replay are feasible with the current small Python
-dependency budget. The stdio wrapper is a **conditional go**: implement it only as
-a separate opt-in command after the invariants above have tests. Streamable HTTP,
-TLS, remote authentication, automatic installation, and background monitoring
-remain separate future decisions.
+The no-forward parser and trace replay remain the safest default. The stdio
+wrapper is a **synthetic-review go** behind its separate opt-in command. Production
+use and release remain no-go until the implementation review and cross-platform
+CI are green. Streamable HTTP, TLS, remote authentication, automatic installation,
+and background monitoring remain separate future decisions.

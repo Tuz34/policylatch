@@ -31,6 +31,7 @@ _MODULES = (
     "receipts",
     "reports",
     "result_scanner",
+    "runtime_gateway",
     "sarif_report",
     "schemas",
     "scanners",

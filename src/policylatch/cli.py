@@ -55,6 +55,7 @@ from .receipts import (
 )
 from .reports import json_report, markdown_report, validate_report
 from .result_scanner import MAX_TOOL_RESULT_BYTES, scan_tool_result
+from .runtime_gateway import parse_upstream_config, run_stdio_gateway
 from .sarif_report import sarif_report
 from .scanners import scan_manifest
 from .schemas import SCHEMA_KINDS, export_schema
@@ -176,6 +177,20 @@ def build_parser() -> argparse.ArgumentParser:
     _add_policy_selector(replay)
     replay.add_argument("--format", choices=["json", "markdown", "html", "sarif"], default="json")
     replay.add_argument("--output", help="Write the report to this path instead of stdout.")
+    stdio_gateway = sub.add_parser(
+        "gateway-stdio",
+        help="Run the opt-in fail-closed gateway for one explicit stdio MCP server.",
+    )
+    stdio_gateway.add_argument("--upstream-config", required=True)
+    _add_policy_selector(stdio_gateway)
+    stdio_gateway.add_argument("--timeout-seconds", type=float, default=10.0)
+    stdio_gateway.add_argument(
+        "--enable-forwarding",
+        action="store_true",
+        help=(
+            "Acknowledge that allowed requests may reach the configured synthetic/upstream server."
+        ),
+    )
     adapter_check = sub.add_parser(
         "adapter-check",
         help="Evaluate a saved Claude Code or Codex PreToolUse event without forwarding.",
@@ -511,6 +526,24 @@ def _explain_markdown(payload: dict[str, Any]) -> str:
 
 
 def run(args: argparse.Namespace) -> int:
+    if args.command == "gateway-stdio":
+        if args.upstream_config == "-":
+            raise InputError("gateway-stdio reserves stdin for MCP messages; use a config file.")
+        config = parse_upstream_config(
+            _read_json(args.upstream_config, max_bytes=MAX_GATEWAY_REQUEST_BYTES),
+            args.upstream_config,
+        )
+        policy, _ = _selected_policy(args)
+        summary = run_stdio_gateway(
+            sys.stdin.buffer,
+            sys.stdout.buffer,
+            policy,
+            config,
+            timeout_seconds=args.timeout_seconds,
+            enabled=args.enable_forwarding,
+        )
+        print(json.dumps(summary, sort_keys=True, separators=(",", ":")), file=sys.stderr)
+        return 0
     if args.command == "policy-diff":
         before = load_policy(args.before)
         after = load_policy(args.after)

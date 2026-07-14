@@ -1,8 +1,9 @@
 # MCP gateway contract
 
-`gateway-check` is the first, deliberately non-forwarding slice of the local MCP
-permission gateway. It proves the protocol-to-policy boundary without starting a
-server, opening a socket, or executing a tool.
+PolicyLatch has two deliberately non-forwarding commands and one separate,
+explicitly opt-in stdio enforcement command. `gateway-check` and
+`gateway-replay` never start a server. `gateway-stdio` starts exactly one argv
+from a reviewed local config and forwards only calls decided `allow`.
 
 ## Current data flow
 
@@ -13,6 +14,14 @@ saved synthetic JSON-RPC request
 strict tools/call parser -> local YAML policy -> ALLOW | WARN | DENY
               |
               +-----------------------------> forwarded: false
+```
+
+Runtime mode is a different boundary:
+
+```text
+MCP client -> bounded lifecycle parser -> YAML policy -> allow -> upstream stdio
+                                           | warn/deny
+                                           +-----------> local JSON-RPC error
 ```
 
 Example:
@@ -77,9 +86,42 @@ and policy findings. It intentionally does not copy raw `arguments` or a raw
 non-allowlisted hostname; source and policy paths are reduced to basenames in
 gateway decisions.
 
-## Current security boundary
+## Opt-in stdio enforcement
 
-The current command does not:
+The upstream config is strict JSON with exactly four fields:
+
+```json
+{
+  "schema_version": 1,
+  "server_id": "reviewed-local-server",
+  "argv": ["python", "path/to/server.py"],
+  "cwd": "."
+}
+```
+
+`argv` is passed as a list with `shell=False`; PolicyLatch never constructs a
+shell string. Relative `cwd` is resolved from the config file and must already
+be a directory. Forwarding stays disabled unless `--enable-forwarding` is set.
+The command reserves stdin/stdout for newline-delimited MCP JSON-RPC, so the
+config cannot be read from stdin and stdout never contains diagnostics.
+
+The implemented lifecycle is intentionally narrow: `initialize`,
+`notifications/initialized`, `ping`, `tools/list`, and `tools/call`. A tool call
+before initialization, a notification-style tool call, a reused request ID, an
+unknown method, a mismatched response ID, malformed output, timeout, oversized
+message, or broken pipe closes the session. Each request is evaluated before its
+bytes reach the child. `allow` forwards once; `warn` and `deny` return a local
+error and never reach upstream. Upstream stderr is drained and discarded, with
+only a truncation boolean retained.
+
+The bundled `synthetic-upstream.json` launches only the repository's fake echo
+server. The fake server never executes a command, opens a network connection, or
+uses tool arguments. A real upstream is outside that synthetic demo boundary and
+may execute an allowed call.
+
+## Security boundary
+
+The no-forward commands do not:
 
 - forward a request or connect to an MCP server;
 - intercept a live stdio, HTTP, or SSE transport;
@@ -92,15 +134,12 @@ Use `default_decision: deny` with a small `allow_names` list for gateway policie
 The bundled `gateway-strict.yaml` is a synthetic starting point, not a universal
 production policy.
 
-## Planned enforcement boundary
+The stdio command does not scan or classify upstream response content yet; that
+is a separate post-flight gate. It also does not support interactive approvals,
+HTTP/SSE, TLS interception, automatic client reconfiguration, background
+monitoring, task-augmented calls, or arbitrary MCP extension methods.
 
-The next transport milestone will wrap one explicitly configured stdio MCP
-server. Before forwarding is considered, the design must define message-size
-limits, backpressure, timeouts, process cleanup, request/response correlation,
-approval behavior, and fail-open versus fail-closed semantics. HTTP/SSE, TLS
-interception, automatic client reconfiguration, and background monitoring are
-not part of this first transport milestone.
-
-Even after forwarding exists, only calls routed through the configured gateway
-can be observed or blocked. That bypass boundary will remain explicit in the UI,
-documentation, and reports.
+Only calls routed through `gateway-stdio` can be observed or blocked. Direct MCP
+client-to-server configuration remains a complete bypass. The session summary is
+data-minimized: policy and upstream fingerprints plus counts and cleanup state;
+it never copies argv, cwd, environment, arguments, results, or server stderr.

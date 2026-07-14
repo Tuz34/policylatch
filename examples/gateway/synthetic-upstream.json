@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "server_id": "policylatch-synthetic-fake",
+  "argv": ["python", "tests/fixtures/fake_mcp_server.py"],
+  "cwd": "../.."
+}
