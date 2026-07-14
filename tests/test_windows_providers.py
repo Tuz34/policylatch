@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import pytest
 
@@ -63,6 +64,28 @@ def test_explicit_windows_collection_returns_observed_summary(monkeypatch):
     assert snapshot["verification_state"] == "observed"
     assert snapshot["source"] == "synthetic_service_provider"
     assert snapshot["state"] == {"present": True, "redacted": True}
+
+
+def test_snapshot_uses_one_normalized_collection_timestamp(monkeypatch):
+    provider = SyntheticProvider()
+    expected = datetime(2026, 1, 15, 10, 0, 0, 123456, tzinfo=timezone.utc)
+
+    class FrozenDateTime:
+        calls = 0
+
+        @classmethod
+        def now(cls, selected_timezone):
+            assert selected_timezone is timezone.utc
+            cls.calls += 1
+            return expected
+
+    monkeypatch.setattr("policylatch.windows_providers.platform.system", lambda: "Windows")
+    monkeypatch.setattr("policylatch.windows_providers.datetime", FrozenDateTime)
+
+    snapshot = collect_windows_snapshot(provider, "SyntheticDemoService", enabled=True)
+
+    assert FrozenDateTime.calls == 1
+    assert snapshot.collected_at == "2026-01-15T10:00:00.123456Z"
 
 
 def test_provider_cannot_claim_verified_state(monkeypatch):

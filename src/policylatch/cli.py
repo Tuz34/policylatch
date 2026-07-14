@@ -39,17 +39,19 @@ from .windows_settings import (
 )
 
 EXIT_CODES = {"allow": 0, "warn": 1, "deny": 2}
+MAX_JSON_INPUT_BYTES = 8 * 1024 * 1024
 
 
 def _read_json(path: str, *, max_bytes: int | None = None) -> dict[str, Any]:
     input_path = Path(path)
+    effective_max = MAX_JSON_INPUT_BYTES if max_bytes is None else max_bytes
     try:
         with input_path.open("rb") as handle:
-            raw = handle.read(max_bytes + 1 if max_bytes is not None else -1)
+            raw = handle.read(effective_max + 1)
     except OSError as exc:
         raise InputError(f"Could not read JSON input '{input_path}': {exc}") from exc
-    if max_bytes is not None and len(raw) > max_bytes:
-        raise InputError(f"JSON input '{input_path}' exceeds the {max_bytes}-byte limit.")
+    if len(raw) > effective_max:
+        raise InputError(f"JSON input '{input_path}' exceeds the {effective_max}-byte limit.")
     try:
         data = json.loads(raw.decode("utf-8"))
     except UnicodeDecodeError as exc:

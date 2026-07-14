@@ -21,7 +21,9 @@ silently weaken a policy.
 
 Patterns are case-insensitive. `*` and `?` use glob matching; patterns without
 wildcards use substring matching. `PolicyLatch` only compares text. It does not parse
-or execute a shell command.
+or execute a shell command. Keep plain patterns specific: `remove` matches
+`Remove-Item -Recurse`, while the shorter text `rm` does not occur contiguously in
+that command and therefore does not match it.
 
 ### `files`
 
@@ -41,7 +43,10 @@ path segments: that pattern does not match `mysecrets/demo.json`.
 Domain matching is case-insensitive. `github.com` matches that exact hostname;
 `*.github.com` matches subdomains such as `api.github.com`, but intentionally does
 not match the apex `github.com`. List both patterns when both forms are allowed.
-A deny match takes precedence over an allow-list warning.
+Patterns apply to the complete hostname but retain glob semantics: a broad pattern
+such as `github*` matches both `github.com` and `github.io`, so exact hostnames or
+explicit subdomain patterns are safer. A deny match takes precedence over an
+allow-list warning.
 
 ### `mcp_tools`
 

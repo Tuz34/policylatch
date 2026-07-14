@@ -72,6 +72,8 @@ green cross-platform CI run and final review.
   Markdown, HTML, or gateway replay output.
 - The reusable Action now rejects multiline report paths before writing step
   outputs and emits output values with fixed `printf` formats.
+- Single-document JSON and YAML policy reads are bounded before parsing, and
+  Windows snapshots now reuse one normalized collection timestamp.
 - Verified Windows audit records now require the comparison provenance format
   `snapshot_comparison:<before-source>-><after-source>`; unmarked verified claims
   are rejected by `audit-append`.

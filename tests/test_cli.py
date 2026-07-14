@@ -121,6 +121,25 @@ def test_gateway_check_rejects_oversized_request_before_json_parse(tmp_path, cap
     assert "exceeds the" in capsys.readouterr().err
 
 
+def test_check_rejects_oversized_json_before_parse(tmp_path, capsys, monkeypatch):
+    source = tmp_path / "oversized-action.json"
+    source.write_bytes(b"{" + b"x" * 32 + b"}")
+    monkeypatch.setattr("policylatch.cli.MAX_JSON_INPUT_BYTES", 32)
+
+    code = main(
+        [
+            "check",
+            "--action",
+            str(source),
+            "--policy",
+            str(ROOT / "examples/policies/balanced.yaml"),
+        ]
+    )
+
+    assert code == 3
+    assert "exceeds the 32-byte limit" in capsys.readouterr().err
+
+
 def test_gateway_check_can_render_markdown(capsys):
     code = main(
         [

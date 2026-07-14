@@ -38,3 +38,20 @@ def test_rejects_empty_pattern(tmp_path):
     )
     with pytest.raises(PolicyError, match="empty patterns"):
         load_policy(path)
+
+
+def test_rejects_oversized_policy_before_parse(tmp_path, monkeypatch):
+    path = tmp_path / "oversized.yaml"
+    path.write_bytes(b"version: 1\n" + b" " * 32)
+    monkeypatch.setattr("policylatch.policy.MAX_POLICY_BYTES", 16)
+
+    with pytest.raises(PolicyError, match="16-byte limit"):
+        load_policy(path)
+
+
+def test_rejects_non_utf8_policy(tmp_path):
+    path = tmp_path / "invalid-utf8.yaml"
+    path.write_bytes(b"version: 1\n\xff")
+
+    with pytest.raises(PolicyError, match="valid UTF-8"):
+        load_policy(path)

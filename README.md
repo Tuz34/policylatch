@@ -217,7 +217,11 @@ is strictly validated but is not cryptographically tamper-evident.
 - Tool descriptions containing prompt-injection or exfiltration phrases.
 - Sensitive capability terms exposed through a tool's `inputSchema`.
 
-Matching is deterministic and case-insensitive. A deny finding wins over warn; otherwise the policy's `default_decision` applies.
+Matching is deterministic and case-insensitive. Plain shell/description patterns
+use substring matching, while domain rules use complete-hostname glob matching.
+Prefer specific text and hostname patterns; broad values such as `remove` or
+`github*` intentionally match a wider surface. A deny finding wins over warn;
+otherwise the policy's `default_decision` applies.
 
 ## Reports
 

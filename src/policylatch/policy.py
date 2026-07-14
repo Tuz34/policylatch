@@ -8,6 +8,7 @@ import yaml
 from .models import Decision
 
 VALID_DECISIONS = {"allow", "warn", "deny"}
+MAX_POLICY_BYTES = 1024 * 1024
 RULE_KEYS = {
     "shell": {"deny_patterns", "warn_patterns"},
     "files": {"deny_paths", "warn_paths"},
@@ -37,11 +38,22 @@ def _string_list(value: Any, location: str) -> list[str]:
 def load_policy(path: str | Path) -> dict[str, Any]:
     policy_path = Path(path)
     try:
-        raw = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
+        with policy_path.open("rb") as handle:
+            encoded = handle.read(MAX_POLICY_BYTES + 1)
     except OSError as exc:
         raise PolicyError(f"Could not read policy '{policy_path}': {exc}") from exc
+    if len(encoded) > MAX_POLICY_BYTES:
+        raise PolicyError(f"Policy '{policy_path}' exceeds the {MAX_POLICY_BYTES}-byte limit.")
+    try:
+        text = encoded.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise PolicyError(f"Policy '{policy_path}' must be valid UTF-8.") from exc
+    try:
+        raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
         raise PolicyError(f"Invalid YAML in policy '{policy_path}': {exc}") from exc
+    except RecursionError as exc:
+        raise PolicyError(f"Policy '{policy_path}' is nested too deeply.") from exc
 
     if not isinstance(raw, dict):
         raise PolicyError("Policy must be a YAML mapping.")
